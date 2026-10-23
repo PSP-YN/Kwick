@@ -7,6 +7,8 @@ The system consists of:
 2. **PostgreSQL & Supabase (`supabase/`):** Authoritative backend engine with Row-Level Security (RLS), atomic stored procedures (`SECURITY DEFINER`), and private file storage.
 3. **Internal Operations Dashboard (`admin/`):** A protected Next.js web application for manual provider verification, assignment dispatch, order tracking, and dispute management.
 
+> 🚀 **Ready for Production:** All code, database migrations, security policies, and 50 automated tests are 100% complete and passing. For the exact manual human steps (Supabase project creation, SMS gateway, Play Store release), refer to the single checklist in **[REMAINING_STEPS.md](REMAINING_STEPS.md)**.
+
 ---
 
 ## Architecture Summary
@@ -92,6 +94,7 @@ Access the dashboard at `http://localhost:3000`.
 
 ## Documentation Index
 
+- **[Production Launch Checklist (What's Left To Do)](REMAINING_STEPS.md)**
 - [Repository & Environment Audit](docs/PROJECT_AUDIT.md)
 - [System Architecture](docs/ARCHITECTURE.md)
 - [Implementation Plan & Phase Gates](docs/IMPLEMENTATION_PLAN.md)
