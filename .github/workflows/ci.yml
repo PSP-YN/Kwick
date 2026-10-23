@@ -65,3 +65,14 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_anon_key
+
+  database-validation:
+    name: Database Migrations & RLS Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Database Tests in Isolated Postgres
+        run: |
+          chmod +x supabase/tests/run_tests.sh
+          ./supabase/tests/run_tests.sh

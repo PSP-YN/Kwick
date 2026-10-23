@@ -1,0 +1,73 @@
+# NexHelp Pilot Operations & Dispatch Runbook
+
+## 1. Pilot Scope & Configuration
+
+- **Pilot Region:** Bengaluru South (HSR Layout & Koramangala sectors)
+- **Active Pincodes:** `560102`
+- **Active Service Categories:**
+  - Plumbing (Tap & faucet, pipe leaks, drain blocks, toilet repairs)
+  - Electrical (Switches, sockets, fan/lighting fixtures, fault diagnosis)
+- **Pilot Operating Hours:** 08:00 AM – 08:00 PM IST
+- **Target Response Window:** < 15 minutes for operator dispatch review
+
+---
+
+## 2. Provider Onboarding & Verification Procedures
+
+1. **Application Submission:**
+   - Provider signs up on mobile app, fills out experience, selects category (`plumbing` or `electrical`), and uploads ID proof and trade certificates.
+   - Initial status: `pending`. Provider cannot view requests or receive assignments.
+2. **Operator Document Review:**
+   - Operator logs into Admin Dashboard (`/admin/providers`).
+   - Reviews uploaded documents in private storage, checks trade background, and verifies phone number.
+3. **Approval / Rejection:**
+   - Operator triggers `admin_verify_provider(provider_id, 'approved', notes)`.
+   - Provider verification changes to `approved`.
+   - Provider becomes eligible for manual job dispatch.
+
+---
+
+## 3. Manual Dispatch & Assignment Workflow
+
+1. **Incoming Request Notification:**
+   - New customer booking appears in `/admin/requests` with status `requested`.
+2. **Review & Provider Matching:**
+   - Operator verifies request location is within active pilot area (`560102`).
+   - Operator views candidate providers filtered by:
+     - `verification_status = 'approved'`
+     - `availability_status = 'available'`
+     - Matching service category.
+3. **Assignment Execution:**
+   - Operator selects candidate provider, enters quoted price in paise (e.g. ₹350 = `35000`), and confirms.
+   - Backend transaction checks provider availability and atomic invariant (no existing active assignment).
+   - Assignment status set to `offered`; request status set to `assigned`.
+4. **Provider Acceptance / Decline:**
+   - Provider receives push and in-app alert.
+   - Provider has 15 minutes to accept or decline.
+   - **Accept:** Provider availability changes to `busy`; request status becomes `accepted`.
+   - **Decline:** Assignment marked `declined` with reason; request automatically reverts to `requested` for operator reassignment.
+
+---
+
+## 4. Job Progression & Completion
+
+1. **Travelling:** Provider taps "On the Way". Request moves to `travelling`. Customer sees provider is en route.
+2. **Service Started:** Provider arrives and taps "Start Service". Request moves to `in_progress`.
+3. **Completion:** Provider finishes work, reviews final bill with customer, and taps "Complete Service".
+   - Provider enters final price in paise.
+   - Request moves to `completed`.
+   - Provider availability automatically resets to `available`.
+   - Customer receives prompt to rate and review service.
+
+---
+
+## 5. Cancellation & Dispute Resolution
+
+1. **Cancellation Policy:**
+   - Customer can cancel anytime while status is `requested`, `reviewing`, or `assigned` without fee.
+   - If cancelled while assignment is `offered`, assignment is automatically withdrawn.
+   - Once job is `in_progress`, cancellation is disabled; customer must use "Raise Issue / Dispute".
+2. **Dispute Handling:**
+   - Customer or provider can submit a support ticket.
+   - Operator reviews order event history and audit logs.
+   - If required, operator performs documented status correction via `admin_override_request_status`.

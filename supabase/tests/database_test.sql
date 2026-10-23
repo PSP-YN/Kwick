@@ -1,0 +1,275 @@
+-- ============================================================================
+-- NexHelp Automated Database & Security Test Suite
+-- ============================================================================
+
+\set ON_ERROR_STOP on
+
+BEGIN;
+
+-- Setup mock auth & storage schemas for testing outside full Supabase host
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE TABLE IF NOT EXISTS auth.users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Mock auth.uid() function for session simulation
+CREATE OR REPLACE FUNCTION auth.uid() RETURNS UUID AS $$
+    SELECT current_setting('request.jwt.claim.sub', true)::UUID;
+$$ LANGUAGE sql STABLE;
+
+CREATE SCHEMA IF NOT EXISTS storage;
+CREATE TABLE IF NOT EXISTS storage.buckets (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    public BOOLEAN DEFAULT false,
+    file_size_limit BIGINT,
+    allowed_mime_types TEXT[]
+);
+CREATE TABLE IF NOT EXISTS storage.objects (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    bucket_id TEXT REFERENCES storage.buckets(id),
+    name TEXT NOT NULL,
+    owner UUID,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION storage.foldername(name TEXT) RETURNS TEXT[] AS $$
+    SELECT string_to_array(name, '/');
+$$ LANGUAGE sql IMMUTABLE;
+
+COMMIT;
+
+-- Apply Migrations
+\i supabase/migrations/20261023000001_initial_schema.sql
+\i supabase/migrations/20261023000002_rls_policies.sql
+\i supabase/migrations/20261023000003_rpc_functions.sql
+\i supabase/migrations/20261023000004_seed_pilot_data.sql
+
+-- ============================================================================
+-- Test Suite Execution (Part 1: Superuser / Admin & Operations)
+-- ============================================================================
+BEGIN;
+
+DO $$
+DECLARE
+    v_admin_id UUID := '11111111-1111-1111-1111-111111111111';
+    v_customer_a_id UUID := '22222222-2222-2222-2222-222222222222';
+    v_customer_b_id UUID := '33333333-3333-3333-3333-333333333333';
+    v_provider_user_id UUID := '44444444-4444-4444-4444-444444444444';
+    v_unrelated_provider_id UUID := '55555555-5555-5555-5555-555555555555';
+
+    v_cat_plumbing UUID;
+    v_pilot_area UUID;
+    v_provider_id UUID;
+    v_unrelated_prov_pk UUID;
+    v_request_id UUID;
+    v_assignment_id UUID;
+    v_failed BOOLEAN;
+BEGIN
+    RAISE NOTICE '>>> Starting NexHelp Automated Test Suite <<<';
+
+    -- ------------------------------------------------------------------------
+    -- Test 1: Verify Seed Data (Pilot Area & Categories)
+    -- ------------------------------------------------------------------------
+    SELECT id INTO v_pilot_area FROM public.service_areas WHERE city = 'Bengaluru' AND pincode = '560102' AND is_active = true;
+    ASSERT v_pilot_area IS NOT NULL, 'Test 1 Failed: Pilot service area missing';
+
+    SELECT id INTO v_cat_plumbing FROM public.service_categories WHERE slug = 'plumbing' AND is_active = true;
+    ASSERT v_cat_plumbing IS NOT NULL, 'Test 1 Failed: Plumbing service category missing';
+    RAISE NOTICE '[PASS] Test 1: Seed data verified (Area & Categories)';
+
+    -- ------------------------------------------------------------------------
+    -- Setup Test Users
+    -- ------------------------------------------------------------------------
+    INSERT INTO auth.users (id, email) VALUES
+        (v_admin_id, 'admin@nexhelp.com'),
+        (v_customer_a_id, 'customer.a@test.com'),
+        (v_customer_b_id, 'customer.b@test.com'),
+        (v_provider_user_id, 'plumber.rajesh@test.com'),
+        (v_unrelated_provider_id, 'electrician.suresh@test.com');
+
+    -- Admin Bootstrap
+    PERFORM public.bootstrap_admin(v_admin_id);
+    ASSERT public.has_role(v_admin_id, 'admin') = true, 'Test 2 Failed: Admin role missing';
+    ASSERT public.has_role(v_admin_id, 'super_admin') = true, 'Test 2 Failed: Super Admin role missing';
+
+    -- Profiles
+    INSERT INTO public.profiles (id, full_name, phone, email) VALUES
+        (v_admin_id, 'Platform Admin', '9876543210', 'admin@nexhelp.com'),
+        (v_customer_a_id, 'Customer Alice', '9876543211', 'customer.a@test.com'),
+        (v_customer_b_id, 'Customer Bob', '9876543212', 'customer.b@test.com'),
+        (v_provider_user_id, 'Rajesh Kumar', '9876543213', 'plumber.rajesh@test.com'),
+        (v_unrelated_provider_id, 'Suresh Gowda', '9876543214', 'electrician.suresh@test.com');
+
+    -- Roles
+    INSERT INTO public.user_roles (user_id, role) VALUES
+        (v_customer_a_id, 'customer'),
+        (v_customer_b_id, 'customer'),
+        (v_provider_user_id, 'provider'),
+        (v_unrelated_provider_id, 'provider');
+    RAISE NOTICE '[PASS] Test 2: User profiles, authentication and RBAC roles created';
+
+    -- ------------------------------------------------------------------------
+    -- Test 3: Customer A creates a service request via RPC
+    -- ------------------------------------------------------------------------
+    PERFORM set_config('request.jwt.claim.sub', v_customer_a_id::text, true);
+    
+    v_request_id := public.create_service_request(
+        p_category_id := v_cat_plumbing,
+        p_service_area_id := v_pilot_area,
+        p_description := 'Kitchen sink tap is leaking continuously since morning',
+        p_address_line := '#142, 5th Cross, 19th Main, HSR Layout Sector 1',
+        p_pincode := '560102',
+        p_scheduled_at := now() + interval '2 hours'
+    );
+    ASSERT v_request_id IS NOT NULL, 'Test 3 Failed: Request ID not returned';
+    ASSERT (SELECT status FROM public.service_requests WHERE id = v_request_id) = 'requested', 'Test 3 Failed: Status must be requested';
+    ASSERT (SELECT count(*) FROM public.order_events WHERE request_id = v_request_id AND event_type = 'request_created') = 1, 'Test 3 Failed: Order event not created';
+    RAISE NOTICE '[PASS] Test 3: Customer service request created with audit trail';
+
+    -- ------------------------------------------------------------------------
+    -- Test 4: Provider Onboarding & Unapproved Assignment Prevention
+    -- ------------------------------------------------------------------------
+    PERFORM set_config('request.jwt.claim.sub', v_provider_user_id::text, true);
+    INSERT INTO public.providers (profile_id, service_area_id, experience_years, verification_status, availability_status)
+    VALUES (v_provider_user_id, v_pilot_area, 6, 'pending', 'available')
+    RETURNING id INTO v_provider_id;
+
+    -- Add category skill
+    INSERT INTO public.provider_services (provider_id, category_id, base_price_minor)
+    VALUES (v_provider_id, v_cat_plumbing, 25000); -- Rs 250.00
+
+    -- As Admin, attempt to assign pending provider (MUST FAIL with exception P0005)
+    PERFORM set_config('request.jwt.claim.sub', v_admin_id::text, true);
+    v_failed := false;
+    BEGIN
+        PERFORM public.assign_provider_to_request(v_request_id, v_provider_id, 30000);
+    EXCEPTION WHEN SQLSTATE 'P0005' THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed = true, 'Test 4 Failed: Assigning unapproved provider did not abort with P0005';
+    RAISE NOTICE '[PASS] Test 4: Unapproved provider correctly blocked from assignments';
+
+    -- ------------------------------------------------------------------------
+    -- Test 5: Admin Approves Provider and Assigns to Request
+    -- ------------------------------------------------------------------------
+    PERFORM public.admin_verify_provider(v_provider_id, 'approved', 'Documents verified by operations team');
+    ASSERT (SELECT verification_status FROM public.providers WHERE id = v_provider_id) = 'approved', 'Test 5 Failed: Verification status not updated';
+
+    v_assignment_id := public.assign_provider_to_request(v_request_id, v_provider_id, 35000);
+    ASSERT v_assignment_id IS NOT NULL, 'Test 5 Failed: Assignment ID not returned';
+    ASSERT (SELECT status FROM public.service_requests WHERE id = v_request_id) = 'assigned', 'Test 5 Failed: Request status not assigned';
+    ASSERT (SELECT status FROM public.assignments WHERE id = v_assignment_id) = 'offered', 'Test 5 Failed: Assignment status not offered';
+    RAISE NOTICE '[PASS] Test 5: Provider approved and assigned successfully';
+
+    -- ------------------------------------------------------------------------
+    -- Test 6: Invariant Test — Duplicate Active Assignment Prevented
+    -- ------------------------------------------------------------------------
+    -- Setup second provider
+    INSERT INTO public.providers (profile_id, service_area_id, experience_years, verification_status, availability_status)
+    VALUES (v_unrelated_provider_id, v_pilot_area, 4, 'approved', 'available')
+    RETURNING id INTO v_unrelated_prov_pk;
+    INSERT INTO public.provider_services (provider_id, category_id, base_price_minor)
+    VALUES (v_unrelated_prov_pk, v_cat_plumbing, 25000);
+
+    v_failed := false;
+    BEGIN
+        -- Attempt to directly insert a second offered assignment for same request
+        INSERT INTO public.assignments (request_id, provider_id, status)
+        VALUES (v_request_id, v_unrelated_prov_pk, 'offered');
+    EXCEPTION WHEN unique_violation THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed = true, 'Test 6 Failed: Invariant failed! Dual active assignments allowed';
+    RAISE NOTICE '[PASS] Test 6: Partial unique index strictly prevents concurrent active assignments';
+
+    -- ------------------------------------------------------------------------
+    -- Test 7: Provider Responds & Accepts Assignment
+    -- ------------------------------------------------------------------------
+    PERFORM set_config('request.jwt.claim.sub', v_provider_user_id::text, true);
+    PERFORM public.respond_to_assignment(v_assignment_id, true);
+
+    ASSERT (SELECT status FROM public.assignments WHERE id = v_assignment_id) = 'accepted', 'Test 7 Failed: Assignment not accepted';
+    ASSERT (SELECT status FROM public.service_requests WHERE id = v_request_id) = 'accepted', 'Test 7 Failed: Request not accepted';
+    ASSERT (SELECT availability_status FROM public.providers WHERE id = v_provider_id) = 'busy', 'Test 7 Failed: Provider not busy';
+    RAISE NOTICE '[PASS] Test 7: Provider accept transition and busy availability verified';
+
+    -- ------------------------------------------------------------------------
+    -- Test 8: Job Progression Lifecycle to Completion
+    -- ------------------------------------------------------------------------
+    PERFORM public.progress_service_request(v_request_id, 'travelling');
+    ASSERT (SELECT status FROM public.service_requests WHERE id = v_request_id) = 'travelling', 'Test 8 Failed: Travelling state';
+
+    PERFORM public.progress_service_request(v_request_id, 'in_progress');
+    ASSERT (SELECT status FROM public.service_requests WHERE id = v_request_id) = 'in_progress', 'Test 8 Failed: In-progress state';
+
+    PERFORM public.progress_service_request(v_request_id, 'completed', 35000);
+    ASSERT (SELECT status FROM public.service_requests WHERE id = v_request_id) = 'completed', 'Test 8 Failed: Completed state';
+    ASSERT (SELECT availability_status FROM public.providers WHERE id = v_provider_id) = 'available', 'Test 8 Failed: Provider not returned to available';
+    ASSERT (SELECT status FROM public.assignments WHERE id = v_assignment_id) = 'completed', 'Test 8 Failed: Assignment not completed';
+    RAISE NOTICE '[PASS] Test 8: Sequential job progression to completion verified';
+
+    -- ------------------------------------------------------------------------
+    -- Test 9: Customer Feedback & One Review Invariant
+    -- ------------------------------------------------------------------------
+    PERFORM set_config('request.jwt.claim.sub', v_customer_a_id::text, true);
+    INSERT INTO public.reviews (customer_id, request_id, provider_id, rating, comment)
+    VALUES (v_customer_a_id, v_request_id, v_provider_id, 5, 'Prompt arrival, fixed the leak within 20 minutes!');
+
+    v_failed := false;
+    BEGIN
+        INSERT INTO public.reviews (customer_id, request_id, provider_id, rating, comment)
+        VALUES (v_customer_a_id, v_request_id, v_provider_id, 4, 'Second duplicate review');
+    EXCEPTION WHEN unique_violation THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed = true, 'Test 9 Failed: Multiple reviews permitted for single request';
+    RAISE NOTICE '[PASS] Test 9: Customer feedback submitted and duplicate review blocked';
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Test 10: RLS Isolation — Authenticated Non-Superuser Role Verification
+-- ----------------------------------------------------------------------------
+-- Switch session to authenticated role
+SET ROLE authenticated;
+
+-- Customer A can see their own request
+SET request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+DO $$
+BEGIN
+    ASSERT (SELECT count(*) FROM public.service_requests WHERE customer_id = '22222222-2222-2222-2222-222222222222') = 1,
+        'Test 10 Failed: Customer A cannot see their own request';
+END;
+$$;
+
+-- Customer B tries to view Customer A's request (Must return 0 rows)
+SET request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+DO $$
+BEGIN
+    ASSERT (SELECT count(*) FROM public.service_requests) = 0,
+        'Test 10 Failed: Customer B can see Customer A request under RLS';
+END;
+$$;
+
+-- Unassigned Provider tries to view Customer A's request (Must return 0 rows)
+SET request.jwt.claim.sub = '55555555-5555-5555-5555-555555555555';
+DO $$
+BEGIN
+    ASSERT (SELECT count(*) FROM public.service_requests) = 0,
+        'Test 10 Failed: Unassigned Provider can see Customer A request under RLS';
+END;
+$$;
+
+RESET ROLE;
+
+DO $$
+BEGIN
+    RAISE NOTICE '[PASS] Test 10: Row-Level Security isolation strictly enforced for authenticated users';
+    RAISE NOTICE '>>> ALL 10 DATABASE & SECURITY TESTS PASSED SUCCESSFULLY! <<<';
+END;
+$$;
+
+ROLLBACK;
