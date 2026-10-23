@@ -86,7 +86,7 @@ Access the dashboard at `http://localhost:3000`.
 | **Flutter Unit & Widget Tests**| `flutter test` |
 | **Flutter Formatting Check** | `dart format --output=none --set-exit-if-changed .` |
 | **Admin Lint & Typecheck** | `npm --prefix admin run lint && npm --prefix admin run build` |
-| **Database Migrations & RLS** | `supabase db reset && supabase test db` |
+| **Database Migrations & RLS** | `./supabase/tests/run_tests.sh` or `supabase test db` |
 
 ---
 
@@ -95,6 +95,7 @@ Access the dashboard at `http://localhost:3000`.
 - [Repository & Environment Audit](docs/PROJECT_AUDIT.md)
 - [System Architecture](docs/ARCHITECTURE.md)
 - [Implementation Plan & Phase Gates](docs/IMPLEMENTATION_PLAN.md)
+- [Deployment & Release Guide](docs/RELEASE.md)
 - [Architectural Decisions Log (ADR)](docs/DECISIONS.md)
 - [Known Issues & External Setup](docs/KNOWN_ISSUES.md)
 - [Database Schema & Invariants](docs/DATABASE.md)
