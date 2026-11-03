@@ -104,3 +104,14 @@ Access the dashboard at `http://localhost:3000`.
 - [Database Schema & Invariants](docs/DATABASE.md)
 - [Security & Access Control](docs/SECURITY.md)
 - [Operations & Pilot Runbook](docs/OPERATIONS.md)
+
+
+## Project documentation
+
+- [Contributing](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security policy](SECURITY.md)
+- [Changelog](CHANGELOG.md)
+- [License](LICENSE)
+- [Copyright and ownership](COPYRIGHT.md)
+- [Project documentation](docs/)
