@@ -1,4 +1,4 @@
-# NexHelp — Production-Ready Home Services Marketplace
+# NexHelp — Trust-First Home Services Marketplace
 
 NexHelp is a curated, trust-first home-services marketplace connecting customers with verified local service professionals (initial pilot: Plumbing and Electrical in Bengaluru, Karnataka, India).
 
@@ -7,7 +7,7 @@ The system consists of:
 2. **PostgreSQL & Supabase (`supabase/`):** Authoritative backend engine with Row-Level Security (RLS), atomic stored procedures (`SECURITY DEFINER`), and private file storage.
 3. **Internal Operations Dashboard (`admin/`):** A protected Next.js web application for manual provider verification, assignment dispatch, order tracking, and dispute management.
 
-> 🚀 **Ready for Production:** All code, database migrations, security policies, and 50 automated tests are 100% complete and passing. For the exact manual human steps (Supabase project creation, SMS gateway, Play Store release), refer to the single checklist in **[REMAINING_STEPS.md](REMAINING_STEPS.md)**.
+> **Verification status:** Automated Flutter, admin, and PostgreSQL test suites are included in this repository. Their current results must be confirmed by CI for the commit being evaluated; this README does not imply that unexecuted tests have passed. Production launch also requires the external configuration listed in **[REMAINING_STEPS.md](REMAINING_STEPS.md)**.
 
 ---
 
