@@ -28,6 +28,7 @@ Files:
 7. `supabase/migrations/20261111000007_dispatch_provider_invariants.sql` (provider assignment invariants)
 8. `supabase/migrations/20261111000008_ai_diagnosis_usage.sql` (private AI usage quota log)
 9. `supabase/migrations/20261111000009_harden_definer_helpers.sql` (SECURITY DEFINER helper hardening)
+10. `supabase/migrations/20261111000010_atomic_ai_quota.sql` (atomic per-user AI quota reservation)
 
 ### 2.2 Storage Buckets & Policies
 Verify the two private buckets are provisioned:
