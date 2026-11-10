@@ -45,6 +45,9 @@ jobs:
       - name: Run Tests
         run: flutter test --coverage
 
+      - name: Compile Android debug APK
+        run: flutter build apk --debug --dart-define=SUPABASE_URL=https://example.supabase.co --dart-define=SUPABASE_ANON_KEY=ci-placeholder
+
   admin-validation:
     name: Admin Next.js Build & Lint
     runs-on: ubuntu-latest
