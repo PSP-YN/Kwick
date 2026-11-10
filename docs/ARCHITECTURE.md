@@ -23,8 +23,8 @@ NexHelp is a production-oriented home-services marketplace connecting customers 
 |               v                             v               |
 |   +-----------------------------------------------------+   |
 |   |                 Supabase Engine                     |   |
-|   |  - Supabase Auth (JWT & Roles)
-|  - Authenticated Edge Function gateway for Gemini triage                      |   |
+|   |  - Supabase Auth (JWT & Roles)                          |   |
+|  - Authenticated Edge Function gateway for Gemini      |   |
 |   |  - PostgreSQL with Row-Level Security (RLS)         |   |
 |   |  - Transactional Stored Procedures (SECURITY DEF.)  |   |
 |   |  - Private Storage Buckets (Docs & Photos)          |   |
