@@ -25,6 +25,7 @@ Files:
 4. `supabase/migrations/20261023000004_seed_pilot_data.sql` (Area 560102, categories, storage buckets)
 5. `supabase/migrations/20261111000005_harden_admin_bootstrap.sql` (privileged bootstrap hardening)
 6. `supabase/migrations/20261111000006_auth_provisioning_and_write_privileges.sql` (Auth provisioning and least-privilege writes)
+7. `supabase/migrations/20261111000007_dispatch_provider_invariants.sql` (provider assignment invariants)
 
 ### 2.2 Storage Buckets & Policies
 Verify the two private buckets are provisioned:
