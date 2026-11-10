@@ -226,6 +226,23 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     });
 
     try {
+      final noteParts = <String>[];
+      if (_notesController.text.trim().isNotEmpty) {
+        noteParts.add(_notesController.text.trim());
+      }
+      if (_diagnosis != null) {
+        final safetyAlerts =
+            (_diagnosis!['safety_alerts'] as List<dynamic>? ?? [])
+                .map((item) => item.toString())
+                .join('; ');
+        noteParts.add(
+          'NexHelp AI triage (advisory): ${_diagnosis!['summary']} '
+          'Urgency: ${_diagnosis!['urgency']}. '
+          'Dispatcher note: ${_diagnosis!['dispatcher_note']}. '
+          'Safety alerts: ${safetyAlerts.isEmpty ? 'None reported' : safetyAlerts}.',
+        );
+      }
+      final customerNotes = noteParts.join('\n\n');
       final supabase = ref.read(supabaseServiceProvider);
       final requestId = await supabase.createServiceRequest(
         categoryId: _selectedCategoryId!,
@@ -234,21 +251,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         addressLine: _addressController.text.trim(),
         pincode: _pincodeController.text.trim(),
         scheduledAt: _scheduledDateTime,
-        customerNotes: [
-          _notesController.text.trim(),
-          if (_diagnosis != null)
-            'NexHelp AI triage (advisory): ${_diagnosis!['summary']} '
-                'Urgency: ${_diagnosis!['urgency']}. '
-                'Dispatcher note: ${_diagnosis!['dispatcher_note']}.',
-        ].where((note) => note.trim().isNotEmpty).join('\n\n').isNotEmpty
-            ? [
-                _notesController.text.trim(),
-                if (_diagnosis != null)
-                  'NexHelp AI triage (advisory): ${_diagnosis!['summary']} '
-                      'Urgency: ${_diagnosis!['urgency']}. '
-                      'Dispatcher note: ${_diagnosis!['dispatcher_note']}.',
-              ].where((note) => note.trim().isNotEmpty).join('\n\n')
-            : null,
+        customerNotes: customerNotes.isEmpty ? null : customerNotes,
       );
 
       ref.invalidate(customerRequestsProvider);
@@ -352,8 +355,11 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                         return Container(
                           margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                           child: InkWell(
-                            onTap: () =>
-                                setState(() => _selectedCategoryId = cat.id),
+                            onTap: () => setState(() {
+                              _selectedCategoryId = cat.id;
+                              _diagnosis = null;
+                              _diagnosisError = null;
+                            }),
                             borderRadius: AppSpacing.roundedMd,
                             child: Container(
                               padding: const EdgeInsets.all(12.0),
