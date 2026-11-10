@@ -166,10 +166,7 @@ class SupabaseService {
     try {
       final response = await client.functions.invoke(
         'diagnose-service',
-        body: {
-          'description': description,
-          'categoryHint': categoryHint,
-        },
+        body: {'description': description, 'categoryHint': categoryHint},
       );
       if (response.status < 200 || response.status >= 300) {
         final data = response.data;
