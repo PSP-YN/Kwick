@@ -12,6 +12,7 @@ The NexHelp database is implemented in PostgreSQL and managed through versioned 
 - `20261111000006_auth_provisioning_and_write_privileges.sql`: Provisions profiles and allowlisted roles from Auth events and narrows direct table writes.
 - `20261111000007_dispatch_provider_invariants.sql`: Enforces one active offer/job per provider and matching service-area eligibility.
 - `20261111000008_ai_diagnosis_usage.sql`: Stores private per-user AI usage metadata without storing customer issue descriptions.
+- `20261111000009_harden_definer_helpers.sql`: Restricts cross-user helper lookups and SECURITY DEFINER execution grants.
 
 ---
 
