@@ -21,6 +21,6 @@ export interface SupportTicket {
   status: 'open' | 'in_progress' | 'resolved' | 'closed'; resolution_notes?: string; created_at: string;
 }
 export interface AdminMetrics {
-  pending_requests: number; matched_requests: number; active_jobs: number;
+  pending_requests: number; active_jobs: number;
   completed_today: number; verified_providers: number; pending_verifications: number;
 }
