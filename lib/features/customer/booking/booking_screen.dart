@@ -72,8 +72,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       final categoryHint = _selectedCategoryId == AppConfig.plumbingCategoryId
           ? 'plumbing'
           : _selectedCategoryId == AppConfig.electricalCategoryId
-              ? 'electrical'
-              : null;
+          ? 'electrical'
+          : null;
       final result = await ref
           .read(supabaseServiceProvider)
           .diagnoseServiceIssue(
@@ -157,7 +157,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                       color: AppColors.error,
                     ),
                     const SizedBox(width: AppSpacing.xs),
-                    Expanded(child: Text(alert, style: AppTextStyles.bodySmall)),
+                    Expanded(
+                      child: Text(alert, style: AppTextStyles.bodySmall),
+                    ),
                   ],
                 ),
               ),
@@ -175,9 +177,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
           const SizedBox(height: AppSpacing.sm),
           Text(
             'AI-generated triage is advisory only. A service professional must verify the issue. Do not approach electrical, fire, gas or flooding hazards.',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textMuted,
-            ),
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
           ),
         ],
       ),
