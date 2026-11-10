@@ -188,7 +188,7 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
                               {req.status.replace('_', ' ')}
                             </span>
                             <p className="text-[11px] font-medium text-zinc-800 mt-0.5">
-                              ₹{(req.estimated_price_paise / 100).toLocaleString('en-IN')}
+                              {req.estimated_price_paise === null ? 'Not quoted' : `₹${(req.estimated_price_paise / 100).toLocaleString('en-IN')}`}
                             </p>
                           </div>
                         </div>
