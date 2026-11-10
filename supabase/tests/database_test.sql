@@ -51,6 +51,7 @@ COMMIT;
 \i supabase/migrations/20261111000005_harden_admin_bootstrap.sql
 \i supabase/migrations/20261111000006_auth_provisioning_and_write_privileges.sql
 \i supabase/migrations/20261111000007_dispatch_provider_invariants.sql
+\i supabase/migrations/20261111000008_ai_diagnosis_usage.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
@@ -318,6 +319,11 @@ BEGIN
     ASSERT NOT has_table_privilege('authenticated', 'public.order_events', 'INSERT'),
         'Test 12 Failed: authenticated users can forge order events';
     RAISE NOTICE '[PASS] Test 12: direct write privileges restricted to intended operations';
+    ASSERT NOT has_table_privilege('authenticated', 'public.ai_diagnosis_usage', 'SELECT'),
+        'Test 13 Failed: authenticated users can read AI usage audit records';
+    ASSERT NOT has_table_privilege('authenticated', 'public.ai_diagnosis_usage', 'INSERT'),
+        'Test 13 Failed: authenticated users can forge AI usage records';
+    RAISE NOTICE '[PASS] Test 13: AI usage audit records are private to trusted server operations';
 END;
 $audit$;
 
