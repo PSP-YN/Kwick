@@ -52,6 +52,7 @@ COMMIT;
 \i supabase/migrations/20261111000006_auth_provisioning_and_write_privileges.sql
 \i supabase/migrations/20261111000007_dispatch_provider_invariants.sql
 \i supabase/migrations/20261111000008_ai_diagnosis_usage.sql
+\i supabase/migrations/20261111000009_harden_definer_helpers.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
@@ -98,6 +99,7 @@ BEGIN
         (v_unrelated_provider_id, 'electrician.suresh@test.com', jsonb_build_object('full_name', 'Suresh Gowda', 'initial_role', 'provider'));
 
     -- Admin Bootstrap
+    PERFORM set_config('request.jwt.claim.sub', v_admin_id::text, true);
     PERFORM public.bootstrap_admin(v_admin_id);
     ASSERT public.has_role(v_admin_id, 'admin') = true, 'Test 2 Failed: Admin role missing';
     ASSERT public.has_role(v_admin_id, 'super_admin') = true, 'Test 2 Failed: Super Admin role missing';
@@ -105,7 +107,7 @@ BEGIN
     -- Auth trigger must provision profile and allowlisted initial role.
     ASSERT EXISTS (SELECT 1 FROM public.profiles WHERE id = v_customer_a_id AND full_name = 'Customer Alice'),
         'Test 2 Failed: Auth trigger did not provision customer profile';
-    ASSERT public.has_role(v_provider_user_id, 'provider'),
+    ASSERT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = v_provider_user_id AND role = 'provider'),
         'Test 2 Failed: Auth trigger did not provision provider role';
     RAISE NOTICE '[PASS] Test 2: User profiles, authentication and RBAC roles created';
 
@@ -324,6 +326,17 @@ BEGIN
     ASSERT NOT has_table_privilege('authenticated', 'public.ai_diagnosis_usage', 'INSERT'),
         'Test 13 Failed: authenticated users can forge AI usage records';
     RAISE NOTICE '[PASS] Test 13: AI usage audit records are private to trusted server operations';
+    ASSERT NOT has_function_privilege('anon', 'public.has_role(uuid,text)', 'EXECUTE'),
+        'Test 14 Failed: anon can inspect role helper';
+    ASSERT NOT has_function_privilege('authenticated', 'public.get_provider_id_for_user(uuid)', 'EXECUTE'),
+        'Test 14 Failed: provider lookup helper is directly exposed';
+    ASSERT has_function_privilege('authenticated', 'public.get_customer_request_ids(uuid)', 'EXECUTE'),
+        'Test 14 Failed: RLS customer request helper unavailable';
+    ASSERT has_function_privilege('authenticated', 'public.create_service_request(uuid,uuid,text,text,text,double precision,double precision,timestamp with time zone,text,text)', 'EXECUTE'),
+        'Test 14 Failed: authenticated customer cannot create requests';
+    ASSERT NOT has_function_privilege('anon', 'public.create_service_request(uuid,uuid,text,text,text,double precision,double precision,timestamp with time zone,text,text)', 'EXECUTE'),
+        'Test 14 Failed: anon can create service requests';
+    RAISE NOTICE '[PASS] Test 14: SECURITY DEFINER helpers and RPC grants are restricted';
 END;
 $audit$;
 
