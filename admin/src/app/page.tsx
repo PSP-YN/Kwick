@@ -19,8 +19,9 @@ import {
   fetchSupportTickets,
 } from '../lib/supabase';
 import { MapPin, ShieldCheck, TrendingUp, Clock } from 'lucide-react';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
-export default function AdminPage() {
+function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut: () => void }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'dispatch' | 'providers' | 'disputes'>('overview');
   const [metrics, setMetrics] = useState<AdminMetrics>({
     pending_requests: 0,
@@ -35,9 +36,11 @@ export default function AdminPage() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = async () => {
     setIsRefreshing(true);
+    setLoadError(null);
     try {
       const [m, r, p, t] = await Promise.all([
         fetchAdminMetrics(),
@@ -50,6 +53,8 @@ export default function AdminPage() {
       setProviders(p);
       setTickets(t);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to load operational data.';
+      setLoadError(message);
       console.error('Failed to load operational admin data:', err);
     } finally {
       setLoading(false);
@@ -76,7 +81,10 @@ export default function AdminPage() {
         }
       } catch (err) {
         console.error('Initial admin data load error:', err);
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoadError(err instanceof Error ? err.message : 'Unable to load operational data.');
+          setLoading(false);
+        }
       }
     };
     init();
@@ -92,6 +100,8 @@ export default function AdminPage() {
         setActiveTab={setActiveTab}
         onRefresh={loadData}
         isRefreshing={isRefreshing}
+        userEmail={userEmail}
+        onSignOut={onSignOut}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -102,6 +112,12 @@ export default function AdminPage() {
           </div>
         ) : (
           <>
+            {loadError && (
+              <div role="alert" className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                Live database data could not be loaded: {loadError}
+              </div>
+            )}
+
             {/* Top KPI Cards */}
             <MetricCards metrics={metrics} />
 
@@ -264,5 +280,159 @@ export default function AdminPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+
+type AuthStatus = 'checking' | 'signed_out' | 'authorized' | 'denied' | 'configuration_error';
+
+export default function AdminPage() {
+  const [authStatus, setAuthStatus] = useState<AuthStatus>('checking');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const verifySession = async (session: import('@supabase/supabase-js').Session | null) => {
+      if (!active) return;
+      if (!session) {
+        setAuthStatus('signed_out');
+        setUserEmail('');
+        return;
+      }
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id);
+      if (!active) return;
+      if (error) {
+        setAuthError(error.message);
+        setAuthStatus('denied');
+        return;
+      }
+      const allowed = data?.some((entry) => entry.role === 'admin' || entry.role === 'super_admin');
+      if (!allowed) {
+        setAuthError('This account does not have NexHelp administrator privileges.');
+        setAuthStatus('denied');
+        return;
+      }
+      setAuthError(null);
+      setUserEmail(session.user.email || session.user.phone || 'Authorized administrator');
+      setAuthStatus('authorized');
+    };
+
+    if (!isSupabaseConfigured) {
+      setAuthStatus('configuration_error');
+      setAuthError('Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to connect the operations console.');
+    } else {
+      supabase.auth.getSession().then(({ data, error }) => {
+        if (error) {
+          if (active) {
+            setAuthError(error.message);
+            setAuthStatus('signed_out');
+          }
+          return;
+        }
+        void verifySession(data.session);
+      });
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      void verifySession(session);
+    });
+    return () => {
+      active = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSigningIn(true);
+    setAuthError(null);
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    setIsSigningIn(false);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    if (!data.session) {
+      setAuthError('Authentication succeeded without an active session. Please retry.');
+      return;
+    }
+    const { data: roles, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', data.session.user.id);
+    if (roleError) {
+      setAuthError(roleError.message);
+      return;
+    }
+    if (!roles?.some((entry) => entry.role === 'admin' || entry.role === 'super_admin')) {
+      await supabase.auth.signOut();
+      setAuthError('This account does not have NexHelp administrator privileges.');
+      setAuthStatus('signed_out');
+      return;
+    }
+    setUserEmail(data.session.user.email || data.session.user.phone || 'Authorized administrator');
+    setAuthStatus('authorized');
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setAuthStatus('signed_out');
+    setUserEmail('');
+  };
+
+  if (authStatus === 'authorized') {
+    return <AdminDashboard userEmail={userEmail} onSignOut={() => void handleSignOut()} />;
+  }
+
+  const heading = authStatus === 'configuration_error'
+    ? 'Operations connection required'
+    : authStatus === 'denied'
+      ? 'Administrator access denied'
+      : authStatus === 'checking'
+        ? 'Checking administrator access'
+        : 'NexHelp Operations';
+
+  return (
+    <main className="min-h-screen bg-zinc-950 flex items-center justify-center px-4 py-12">
+      <section className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl">
+        <div className="mb-8">
+          <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600 text-white">
+            <ShieldCheck className="h-6 w-6" />
+          </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">NexHelp · Operations</p>
+          <h1 className="mt-2 text-2xl font-bold text-white">{heading}</h1>
+          <p className="mt-2 text-sm text-zinc-400">Sign in with an account that has an admin or super-admin role.</p>
+        </div>
+        {authError && <div role="alert" className="mb-5 rounded-lg border border-rose-800 bg-rose-950/60 p-3 text-sm text-rose-200">{authError}</div>}
+        {authStatus === 'checking' ? (
+          <p className="text-sm text-zinc-400">Verifying your session…</p>
+        ) : authStatus === 'configuration_error' ? (
+          <p className="text-sm text-zinc-300">The dashboard is not configured to connect to a Supabase project. Set the required public environment variables in your deployment.</p>
+        ) : authStatus === 'denied' ? (
+          <button onClick={() => void handleSignOut()} className="w-full rounded-lg bg-zinc-700 px-4 py-3 text-sm font-semibold text-white hover:bg-zinc-600">Sign out</button>
+        ) : (
+          <form onSubmit={handleSignIn} className="space-y-4">
+            <label className="block text-sm font-medium text-zinc-300">
+              Email
+              <input required type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-500" />
+            </label>
+            <label className="block text-sm font-medium text-zinc-300">
+              Password
+              <input required type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-500" />
+            </label>
+            <button disabled={isSigningIn} type="submit" className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60">
+              {isSigningIn ? 'Signing in…' : 'Sign in to Operations'}
+            </button>
+          </form>
+        )}
+      </section>
+    </main>
   );
 }
