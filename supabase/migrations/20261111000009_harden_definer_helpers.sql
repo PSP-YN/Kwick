@@ -87,7 +87,7 @@ SET search_path = ''
 AS $function$
   SELECT sr.id
   FROM public.service_requests sr
-  WHERE p_user_id = auth.uid() OR public.is_admin()
+  WHERE (p_user_id = auth.uid() OR public.is_admin())
     AND sr.customer_id = p_user_id;
 $function$;
 
