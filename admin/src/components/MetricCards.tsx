@@ -22,14 +22,14 @@ export default function MetricCards({ metrics }: MetricCardsProps) {
     {
       title: 'Active Jobs In Progress',
       value: metrics.active_jobs,
-      subtext: 'Assigned or currently underway',
+      subtext: 'Accepted, travelling or in progress',
       icon: Activity,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200',
     },
     {
-      title: 'Verified Partners On-Field',
+      title: 'Verified Providers',
       value: metrics.verified_providers,
       subtext: `${metrics.pending_verifications} awaiting document audit`,
       icon: UserCheck,
@@ -40,7 +40,7 @@ export default function MetricCards({ metrics }: MetricCardsProps) {
     {
       title: 'Jobs Completed Today',
       value: metrics.completed_today,
-      subtext: '100% verified pilot delivery',
+      subtext: 'Completion timestamps recorded today',
       icon: CheckCircle2,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50',
