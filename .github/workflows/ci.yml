@@ -31,6 +31,14 @@ jobs:
       - name: Check Formatting
         run: dart format --output=none --set-exit-if-changed .
 
+      - name: Show Dart formatting diff on failure
+        if: failure()
+        run: |
+          for file in lib/shared/services/supabase_service.dart lib/features/customer/booking/booking_screen.dart; do
+            dart format --output=show "$file" > /tmp/formatted.dart
+            diff -u "$file" /tmp/formatted.dart || true
+          done
+
       - name: Analyze Code
         run: flutter analyze
 
