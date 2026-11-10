@@ -168,7 +168,7 @@ class SupabaseService {
         'diagnose-service',
         body: {
           'description': description,
-          if (categoryHint != null) 'categoryHint': categoryHint,
+          'categoryHint': ?categoryHint,
         },
       );
       if (response.status < 200 || response.status >= 300) {
