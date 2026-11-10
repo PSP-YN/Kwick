@@ -6,10 +6,20 @@ The system consists of:
 1. **Flutter Mobile Application (`lib/`):** A single codebase providing role-aware customer and service provider experiences.
 2. **PostgreSQL & Supabase (`supabase/`):** Authoritative backend engine with Row-Level Security (RLS), atomic stored procedures (`SECURITY DEFINER`), and private file storage.
 3. **Internal Operations Dashboard (`admin/`):** A protected Next.js web application for manual provider verification, assignment dispatch, order tracking, and dispute management.
+4. **NexHelp Intelligence (`supabase/functions/diagnose-service/`):** An authenticated Gemini-powered issue-triage function that returns structured, advisory guidance before a booking is submitted.
 
 > **Verification status:** Automated Flutter, admin, and PostgreSQL test suites are included in this repository. Their current results must be confirmed by CI for the commit being evaluated; this README does not imply that unexecuted tests have passed. Production launch also requires the external configuration listed in **[REMAINING_STEPS.md](REMAINING_STEPS.md)**.
 
 ---
+
+## Product Capabilities
+
+- Customer and provider experiences in one Flutter application.
+- Plumbing and electrical service booking for the Bengaluru South pilot.
+- AI-assisted issue triage with urgency, safety alerts, follow-up questions, and dispatcher notes. AI is optional; customers can book without it.
+- Verified-provider onboarding, availability controls, and transactional assignment lifecycle.
+- Protected operations console with live database metrics, provider verification, dispatch, and audit-aware overrides.
+- Row-level security, least-privilege column grants, server-side AI secrets, and a private AI usage quota log.
 
 ## Architecture Summary
 
@@ -35,7 +45,7 @@ nexhelp/
 
 - **Flutter SDK:** 3.44.0+ (Dart 3.12.0+)
 - **Java JDK:** OpenJDK 17
-- **Node.js:** v20+ / v24+
+- **Node.js:** v22+
 - **Supabase CLI:** v2.90.0+
 - **Docker:** Engine active for local Supabase emulator
 
@@ -102,6 +112,8 @@ Access the dashboard at `http://localhost:3000`.
 - [Architectural Decisions Log (ADR)](docs/DECISIONS.md)
 - [Known Issues & External Setup](docs/KNOWN_ISSUES.md)
 - [Database Schema & Invariants](docs/DATABASE.md)
+- [NexHelp Intelligence — AI Triage, Safety & Privacy](docs/AI_DIAGNOSIS.md)
+- [HackGlobal 2026 Submission Brief & Demo Plan](HACKGLOBAL_SUBMISSION.md)
 - [Security & Access Control](docs/SECURITY.md)
 - [Operations & Pilot Runbook](docs/OPERATIONS.md)
 
