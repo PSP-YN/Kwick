@@ -11,6 +11,8 @@ CREATE SCHEMA IF NOT EXISTS auth;
 CREATE TABLE IF NOT EXISTS auth.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT,
+    phone TEXT,
+    raw_user_meta_data JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -47,6 +49,7 @@ COMMIT;
 \i supabase/migrations/20261023000003_rpc_functions.sql
 \i supabase/migrations/20261023000004_seed_pilot_data.sql
 \i supabase/migrations/20261111000005_harden_admin_bootstrap.sql
+\i supabase/migrations/20261111000006_auth_provisioning_and_write_privileges.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
@@ -84,32 +87,23 @@ BEGIN
     -- ------------------------------------------------------------------------
     -- Setup Test Users
     -- ------------------------------------------------------------------------
-    INSERT INTO auth.users (id, email) VALUES
-        (v_admin_id, 'admin@nexhelp.com'),
-        (v_customer_a_id, 'customer.a@test.com'),
-        (v_customer_b_id, 'customer.b@test.com'),
-        (v_provider_user_id, 'plumber.rajesh@test.com'),
-        (v_unrelated_provider_id, 'electrician.suresh@test.com');
+    INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES
+        (v_admin_id, 'admin@nexhelp.com', jsonb_build_object('full_name', 'Platform Admin', 'initial_role', 'customer')),
+        (v_customer_a_id, 'customer.a@test.com', jsonb_build_object('full_name', 'Customer Alice', 'initial_role', 'customer')),
+        (v_customer_b_id, 'customer.b@test.com', jsonb_build_object('full_name', 'Customer Bob', 'initial_role', 'customer')),
+        (v_provider_user_id, 'plumber.rajesh@test.com', jsonb_build_object('full_name', 'Rajesh Kumar', 'initial_role', 'provider')),
+        (v_unrelated_provider_id, 'electrician.suresh@test.com', jsonb_build_object('full_name', 'Suresh Gowda', 'initial_role', 'provider'));
 
     -- Admin Bootstrap
     PERFORM public.bootstrap_admin(v_admin_id);
     ASSERT public.has_role(v_admin_id, 'admin') = true, 'Test 2 Failed: Admin role missing';
     ASSERT public.has_role(v_admin_id, 'super_admin') = true, 'Test 2 Failed: Super Admin role missing';
 
-    -- Profiles
-    INSERT INTO public.profiles (id, full_name, phone, email) VALUES
-        (v_admin_id, 'Platform Admin', '9876543210', 'admin@nexhelp.com'),
-        (v_customer_a_id, 'Customer Alice', '9876543211', 'customer.a@test.com'),
-        (v_customer_b_id, 'Customer Bob', '9876543212', 'customer.b@test.com'),
-        (v_provider_user_id, 'Rajesh Kumar', '9876543213', 'plumber.rajesh@test.com'),
-        (v_unrelated_provider_id, 'Suresh Gowda', '9876543214', 'electrician.suresh@test.com');
-
-    -- Roles
-    INSERT INTO public.user_roles (user_id, role) VALUES
-        (v_customer_a_id, 'customer'),
-        (v_customer_b_id, 'customer'),
-        (v_provider_user_id, 'provider'),
-        (v_unrelated_provider_id, 'provider');
+    -- Auth trigger must provision profile and allowlisted initial role.
+    ASSERT EXISTS (SELECT 1 FROM public.profiles WHERE id = v_customer_a_id AND full_name = 'Customer Alice'),
+        'Test 2 Failed: Auth trigger did not provision customer profile';
+    ASSERT public.has_role(v_provider_user_id, 'provider'),
+        'Test 2 Failed: Auth trigger did not provision provider role';
     RAISE NOTICE '[PASS] Test 2: User profiles, authentication and RBAC roles created';
 
     -- ------------------------------------------------------------------------
@@ -281,6 +275,17 @@ BEGIN
     ASSERT NOT has_function_privilege('authenticated', 'public.bootstrap_admin(uuid)', 'EXECUTE'),
         'Test 11 Failed: authenticated can execute bootstrap_admin';
     RAISE NOTICE '[PASS] Test 11: bootstrap_admin execution restricted to trusted database operators';
+    ASSERT has_column_privilege('authenticated', 'public.providers', 'availability_status', 'UPDATE'),
+        'Test 12 Failed: provider availability update privilege missing';
+    ASSERT NOT has_column_privilege('authenticated', 'public.providers', 'verification_status', 'UPDATE'),
+        'Test 12 Failed: providers can directly update verification status';
+    ASSERT NOT has_table_privilege('authenticated', 'public.service_requests', 'UPDATE'),
+        'Test 12 Failed: authenticated users can directly update service requests';
+    ASSERT NOT has_table_privilege('authenticated', 'public.assignments', 'UPDATE'),
+        'Test 12 Failed: authenticated users can directly update assignments';
+    ASSERT NOT has_table_privilege('authenticated', 'public.order_events', 'INSERT'),
+        'Test 12 Failed: authenticated users can forge order events';
+    RAISE NOTICE '[PASS] Test 12: direct write privileges restricted to intended operations';
 END;
 $audit$;
 
