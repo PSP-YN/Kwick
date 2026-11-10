@@ -46,6 +46,7 @@ COMMIT;
 \i supabase/migrations/20261023000002_rls_policies.sql
 \i supabase/migrations/20261023000003_rpc_functions.sql
 \i supabase/migrations/20261023000004_seed_pilot_data.sql
+\i supabase/migrations/20261111000005_harden_admin_bootstrap.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
