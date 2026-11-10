@@ -38,31 +38,17 @@ class SupabaseService {
     UserRole initialRole = UserRole.customer,
   }) async {
     try {
-      final response = await client.auth.signUp(
+      // The trusted auth.users trigger provisions profiles and the allowlisted
+      // customer/provider role. The client must never write to user_roles.
+      return await client.auth.signUp(
         email: email,
         password: password,
-        data: {'full_name': fullName, 'phone': phone},
-      );
-
-      final user = response.user;
-      if (user != null) {
-        // Provision profile record
-        await client.from('profiles').upsert({
-          'id': user.id,
+        data: {
           'full_name': fullName,
           'phone': phone,
-          'email': email,
-          'account_status': 'active',
-        });
-
-        // Assign initial role
-        await client.from('user_roles').upsert({
-          'user_id': user.id,
-          'role': initialRole.value,
-        });
-      }
-
-      return response;
+          'initial_role': initialRole == UserRole.provider ? 'provider' : 'customer',
+        },
+      );
     } on AuthException catch (e) {
       throw AuthFailure(e.message, code: e.statusCode);
     } catch (e) {
