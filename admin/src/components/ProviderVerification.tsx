@@ -25,7 +25,7 @@ export default function ProviderVerification({
 
   const filteredProviders = providers.filter((p) => {
     if (activeFilter === 'pending') {
-      return p.verification_status === 'submitted' || p.verification_status === 'under_review';
+      return p.verification_status === 'pending';
     }
     if (activeFilter === 'approved') {
       return p.verification_status === 'approved';
