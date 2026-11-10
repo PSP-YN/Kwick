@@ -89,22 +89,15 @@ Deno.serve(async (request) => {
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const windowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count, error: quotaError } = await adminClient
-    .from("ai_diagnosis_usage")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userData.user.id)
-    .gte("created_at", windowStart);
+  const { data: reserved, error: quotaError } = await adminClient.rpc(
+    "reserve_ai_diagnosis_slot",
+    { p_user_id: userData.user.id, p_model: model, p_limit: 5 },
+  );
 
-  if (quotaError) return json(503, { error: "Could not verify AI usage limits." });
-  if ((count || 0) >= 5) {
+  if (quotaError) return json(503, { error: "Could not reserve an AI assessment slot." });
+  if (reserved !== true) {
     return json(429, { error: "You have reached the current limit of 5 AI assessments per hour. You can still submit a service request without AI." });
   }
-
-  const { error: usageError } = await adminClient
-    .from("ai_diagnosis_usage")
-    .insert({ user_id: userData.user.id, model });
-  if (usageError) return json(503, { error: "Could not record AI usage. Please retry shortly." });
 
   const prompt = [
     "Assess a home-service issue for a marketplace dispatcher.",
