@@ -19,7 +19,7 @@ NexHelp Intelligence helps a customer describe a home-service problem and gives 
 - No repair instructions, price promises, provider availability claims, or medical advice.
 - Emergency urgency is reserved for immediate hazards such as fire, smoke, electric shock, exposed live wiring, gas smell, major flooding, or immediate risk to life.
 - Safety alerts are conservative. Users should stay away from hazards and contact local emergency services or the relevant utility when appropriate.
-- AI suggestions never change the customer's selected category or submit a booking without user action.
+- AI suggestions never change the selected category automatically; the customer can explicitly apply a supported suggestion. Booking submission always requires customer action.
 - The customer-facing UI labels the output advisory and discloses that issue text is sent to Gemini.
 - Users are instructed not to include names, phone numbers, or addresses in the issue description.
 
