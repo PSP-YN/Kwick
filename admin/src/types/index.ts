@@ -5,7 +5,7 @@ export type AvailabilityStatus = 'available' | 'busy' | 'unavailable';
 export interface ServiceRequest {
   id: string; customer_id: string; customer_name?: string; customer_phone?: string;
   category_id: string; category_name: string; pincode: string; address_line1: string;
-  landmark?: string; description: string; status: OrderStatus;
+  landmark?: string; description: string; customer_notes?: string | null; status: OrderStatus;
   estimated_price_paise: number | null; final_price_paise?: number | null;
   created_at: string; scheduled_for?: string; current_provider_id?: string; current_provider_name?: string;
 }
