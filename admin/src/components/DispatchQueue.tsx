@@ -37,10 +37,28 @@ export default function DispatchQueue({
     return matchesStatus && matchesCategory && matchesSearch;
   });
 
-  // Eligible providers: approved and available
-  const eligibleProviders = providers.filter(
-    (p) => p.verification_status === 'approved' && p.availability_status === 'available'
-  );
+  // Match only approved, available providers with the requested trade.
+  // Ranking is transparent: published rating, completed jobs, then experience.
+  const eligibleProviders = providers
+    .filter((provider) => {
+      const hasTrade = selectedRequest
+        ? provider.categories.some(
+            (category) =>
+              category.toLowerCase() === selectedRequest.category_name.toLowerCase(),
+          )
+        : true;
+      return (
+        provider.verification_status === 'approved' &&
+        provider.availability_status === 'available' &&
+        hasTrade
+      );
+    })
+    .sort(
+      (a, b) =>
+        b.rating_average - a.rating_average ||
+        b.total_jobs_completed - a.total_jobs_completed ||
+        b.experience_years - a.experience_years,
+    );
 
   const handleAssign = async () => {
     if (!selectedRequest || !selectedProviderId) return;
@@ -248,8 +266,11 @@ export default function DispatchQueue({
 
             <div className="mb-4">
               <label className="block text-xs font-semibold text-zinc-700 mb-2">
-                Select Available & Verified Partner:
+                Select a matching, verified & available partner:
               </label>
+              <p className="mb-2 text-[11px] text-zinc-500">
+                Ranked by published rating, completed jobs, and experience after trade and availability checks.
+              </p>
               {eligibleProviders.length === 0 ? (
                 <p className="text-xs text-rose-600 bg-rose-50 p-3 rounded border border-rose-200">
                   No verified providers currently available. Please approve pending providers first.
