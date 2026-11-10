@@ -7,6 +7,7 @@ NexHelp is a production-oriented home-services marketplace connecting customers 
 1. **Flutter Mobile Application:** Unified codebase running role-based interfaces for Customers and Service Providers.
 2. **PostgreSQL & Supabase Backend:** Authoritative source of state, security policies (RLS), transactional RPC procedures, and private file storage.
 3. **Internal Operations Dashboard (`admin/`):** A protected Next.js web application for manual provider verification, assignment dispatch, order tracking, and dispute management.
+4. **NexHelp Intelligence (`supabase/functions/diagnose-service/`):** An authenticated Gemini-powered Edge Function that returns structured, advisory issue triage.
 
 ```
 +-------------------------------------------------------------+
@@ -22,7 +23,8 @@ NexHelp is a production-oriented home-services marketplace connecting customers 
 |               v                             v               |
 |   +-----------------------------------------------------+   |
 |   |                 Supabase Engine                     |   |
-|   |  - Supabase Auth (JWT & Roles)                      |   |
+|   |  - Supabase Auth (JWT & Roles)
+|  - Authenticated Edge Function gateway for Gemini triage                      |   |
 |   |  - PostgreSQL with Row-Level Security (RLS)         |   |
 |   |  - Transactional Stored Procedures (SECURITY DEF.)  |   |
 |   |  - Private Storage Buckets (Docs & Photos)          |   |
@@ -89,7 +91,8 @@ lib/
 2. **Order Lifecycle & Invariants:**
    - State machine: `requested` -> `reviewing` -> `assigned` -> `accepted` -> `travelling` -> `in_progress` -> `completed`.
    - Terminal/Alternative states: `cancelled`, `disputed`.
-   - **One Active Assignment Invariant:** A partial unique index on `assignments(request_id)` where `status IN ('offered', 'accepted')` strictly prohibits concurrent active assignments.
+   - **One Active Assignment per Request:** A partial unique index on `assignments(request_id)` for `status IN ('offered', 'accepted')` prevents duplicate active offers for a request.
+   - **One Active Assignment per Provider:** A second partial unique index on `assignments(provider_id)` for `status IN ('offered', 'accepted')` prevents a provider from receiving overlapping active jobs.
    - **Financial Precision:** All amounts (`quoted_price_minor`, `final_price_minor`, `base_price_minor`) stored in integer paise.
 
 3. **Row-Level Security (RLS):**
@@ -97,10 +100,10 @@ lib/
    - Customers only access their own profiles, requests, authorized provider info on assigned jobs, and their submitted reviews.
    - Providers only access their own profile, verification status, active assignments offered to them, and necessary job details.
    - Unassigned providers cannot view customer addresses or phone numbers.
-   - Admins validate their role via a secure `has_role(auth.uid(), 'admin'::user_role)` function to perform operational queries.
+   - Admin access is checked through the self-scoped `is_admin()` helper and protected admin RPCs; `has_role(user_id, role)` is also scoped to the caller or an administrator.
 
 4. **Transactional RPC Procedures:**
-   - Multi-step operations (e.g., job assignment, acceptance, cancellation, state override) execute within atomic PostgreSQL functions with `SECURITY DEFINER` and strict `SET search_path = public, pg_temp;`.
+   - Multi-step operations (e.g., job assignment, acceptance, cancellation, state override) execute within atomic PostgreSQL functions with `SECURITY DEFINER`, schema-qualified references, and an empty `search_path` to reduce search-path injection risk.
 
 ---
 
@@ -111,3 +114,67 @@ The internal dashboard is built with Next.js (App Router) and TypeScript:
 - Checks authenticated session against `user_roles` table. Non-admins are redirected immediately.
 - Never embeds the Supabase `service_role` secret in the client bundle. Administrative procedures run under the authenticated admin JWT, adhering to admin RLS policies.
 - Audit trail: Every administrative action (approval, rejection, suspension, manual assignment, status override) logs an immutable entry to `admin_audit_logs`.
+
+
+---
+
+## 5. NexHelp Intelligence — AI Triage
+
+The optional AI pathway is implemented as a Supabase Edge Function. The Flutter client sends an issue description and optional category hint with the signed-in user's JWT. The function validates that JWT with Supabase Auth, enforces a per-user hourly quota, records usage metadata, calls the configured Gemini Developer API model, and validates the structured response before returning it.
+
+The response contains:
+- Suggested service category: plumbing, electrical, or other.
+- Urgency: routine, soon, urgent, or emergency.
+- Short issue summary and confidence label.
+- Conservative safety alerts.
+- Up to three follow-up questions.
+- Dispatcher note.
+
+The AI is advisory only. It cannot submit a booking, assign a provider, set a price, or change job status. Customers can submit a standard booking without AI. Raw issue descriptions are not stored in the AI usage audit table.
+
+## 6. AI Request Sequence
+
+```mermaid
+sequenceDiagram
+  participant U as Flutter Customer App
+  participant E as diagnose-service Edge Function
+  participant A as Supabase Auth
+  participant D as PostgreSQL
+  participant G as Gemini Developer API
+  U->>E: Description + category hint + JWT
+  E->>A: Validate JWT
+  A-->>E: Authenticated user
+  E->>D: Check quota and record usage metadata
+  E->>G: Request schema-constrained JSON triage
+  G-->>E: Structured assessment
+  E->>E: Validate enums and required fields
+  E-->>U: Advisory assessment
+```
+
+## 7. Booking and Dispatch Flow
+
+```mermaid
+flowchart TD
+  A[Customer describes issue] --> B{Use AI triage?}
+  B -->|Yes| C[Review category, urgency and safety]
+  B -->|No| D[Standard booking]
+  C --> E[Customer confirms]
+  D --> E
+  E --> F[create_service_request RPC]
+  F --> G[Operations reviews request]
+  G --> H[Select eligible provider]
+  H --> I[assign_provider_to_request RPC]
+  I --> J[Provider receives offer]
+  J --> K{Accept?}
+  K -->|No| H
+  K -->|Yes| L[Provider progresses job]
+  L --> M[Completion and customer review]
+```
+
+## 8. Dispatch Eligibility
+
+The database assignment function is authoritative and requires an administrator caller, an assignable request, an approved provider, available status, matching service area, and an active provider-service mapping for the requested category. The operations UI ranks eligible candidates by published rating, completed jobs, and experience; the ranking does not replace server-side eligibility checks.
+
+## 9. Deployment Boundary
+
+The repository contains the app code, migrations, Edge Function, and deployment documentation. A dedicated NexHelp Supabase project, project-specific public configuration, server-side `GEMINI_API_KEY`, migration deployment, Edge Function deployment, and live end-to-end verification are still required before describing NexHelp as publicly deployed.
