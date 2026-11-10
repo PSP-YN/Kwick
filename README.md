@@ -115,6 +115,7 @@ Access the dashboard at `http://localhost:3000`.
 - [NexHelp Intelligence — AI Triage, Safety & Privacy](docs/AI_DIAGNOSIS.md)
 - [HackGlobal 2026 Submission Brief & Demo Plan](HACKGLOBAL_SUBMISSION.md)
 - [HackGlobal Pitch Deck Prompt](docs/HACKGLOBAL_PITCH_DECK_PROMPT.md)
+- [HackGlobal Demo Video Script](docs/HACKGLOBAL_DEMO_SCRIPT.md)
 - [Security & Access Control](docs/SECURITY.md)
 - [Operations & Pilot Runbook](docs/OPERATIONS.md)
 
