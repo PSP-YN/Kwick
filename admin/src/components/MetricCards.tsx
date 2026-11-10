@@ -12,7 +12,7 @@ export default function MetricCards({ metrics }: MetricCardsProps) {
   const cards = [
     {
       title: 'Requests Awaiting Dispatch',
-      value: metrics.pending_requests + metrics.matched_requests,
+      value: metrics.pending_requests,
       subtext: 'Pilot Pincode 560102',
       icon: Clock,
       color: 'text-amber-600',
@@ -31,7 +31,7 @@ export default function MetricCards({ metrics }: MetricCardsProps) {
     {
       title: 'Verified Providers',
       value: metrics.verified_providers,
-      subtext: `${metrics.pending_verifications} awaiting document audit`,
+      subtext: `${metrics.pending_verifications} awaiting verification review`,
       icon: UserCheck,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
