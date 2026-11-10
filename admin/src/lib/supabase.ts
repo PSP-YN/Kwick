@@ -149,7 +149,7 @@ export async function assignProviderRpc(requestId: string, providerId: string): 
 }
 export async function verifyProviderRpc(providerId: string, newStatus: 'approved' | 'rejected', notes: string): Promise<{ success: boolean; message: string }> {
   assertSupabaseConfigured();
-  const { error } = await supabase.rpc('admin_verify_provider', { p_provider_id: providerId, p_status: newStatus, p_notes: notes });
+  const { error } = await supabase.rpc('admin_verify_provider', { p_provider_id: providerId, p_new_status: newStatus, p_notes: notes });
   if (error) return { success: false, message: error.message };
   return { success: true, message: `Provider status updated to ${newStatus}.` };
 }
