@@ -102,7 +102,9 @@ export async function fetchProviders(): Promise<ProviderProfile[]> {
     const signedUrl = async (path?: string) => {
       if (!path) return undefined;
       const result = await supabase.storage.from('provider-documents').createSignedUrl(path, 300);
-      throwIfError(result.error); return result.data.signedUrl;
+      throwIfError(result.error);
+      if (!result.data?.signedUrl) throw new Error('Could not create a temporary provider-document link.');
+      return result.data.signedUrl;
     };
     const idDoc = docs.find((doc) => doc.document_type === 'id_proof');
     const tradeDoc = docs.find((doc) => doc.document_type === 'trade_certification');
