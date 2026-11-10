@@ -19,7 +19,7 @@ REVOKE ALL ON public.ai_diagnosis_usage FROM authenticated;
 DO $grant$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
-    GRANT SELECT, INSERT ON public.ai_diagnosis_usage TO service_role;
+    EXECUTE 'GRANT SELECT, INSERT ON public.ai_diagnosis_usage TO service_role';
   END IF;
 END;
 $grant$;
