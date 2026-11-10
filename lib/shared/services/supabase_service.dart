@@ -159,6 +159,36 @@ class SupabaseService {
   // ---------------------------------------------------------------------------
   // Customer Booking & Requests
   // ---------------------------------------------------------------------------
+  Future<Map<String, dynamic>> diagnoseServiceIssue({
+    required String description,
+    String? categoryHint,
+  }) async {
+    try {
+      final response = await client.functions.invoke(
+        'diagnose-service',
+        body: {
+          'description': description,
+          if (categoryHint != null) 'categoryHint': categoryHint,
+        },
+      );
+      if (response.status < 200 || response.status >= 300) {
+        final data = response.data;
+        final message = data is Map ? data['error']?.toString() : null;
+        throw ServerFailure(
+          message ?? 'AI assessment failed with status ${response.status}.',
+        );
+      }
+      if (response.data is! Map) {
+        throw ServerFailure('AI assessment returned an invalid response.');
+      }
+      return Map<String, dynamic>.from(response.data as Map);
+    } on ServerFailure {
+      rethrow;
+    } catch (e) {
+      throw ServerFailure('AI issue analysis unavailable: $e');
+    }
+  }
+
   Future<String> createServiceRequest({
     required String categoryId,
     required String serviceAreaId,
