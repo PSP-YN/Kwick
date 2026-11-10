@@ -274,7 +274,7 @@ END;
 $$;
 
 -- Test 11: First-admin bootstrap is not executable by untrusted API roles.
-DO $
+DO $audit$
 BEGIN
     ASSERT NOT has_function_privilege('anon', 'public.bootstrap_admin(uuid)', 'EXECUTE'),
         'Test 11 Failed: anon can execute bootstrap_admin';
@@ -282,6 +282,6 @@ BEGIN
         'Test 11 Failed: authenticated can execute bootstrap_admin';
     RAISE NOTICE '[PASS] Test 11: bootstrap_admin execution restricted to trusted database operators';
 END;
-$;
+$audit$;
 
 ROLLBACK;
