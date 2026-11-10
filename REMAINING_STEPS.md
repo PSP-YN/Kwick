@@ -172,10 +172,10 @@ For the initial launch in Bengaluru South (HSR Layout & Koramangala 560102):
 1. Have 5–10 trusted plumbers and electricians download the app and sign up as **Partner**.
 2. During onboarding, they select **Plumbing** or **Electrical** and input experience years.
 3. **Important current limitation:** The mobile onboarding flow does not yet include in-app ID/trade-document upload. For this pilot, collect and inspect identity/trade evidence through a secure, documented offline process before approval. Do not ask providers to upload sensitive identity documents through chat or an unapproved channel.
-3. Open the **Operations Console** (`/admin` $\to$ **Provider Verifications** tab):
-   - Review uploaded documents.
-   - Click **Approve Partner** and enter audit verification notes.
-4. Once approved, partners toggle their status to **Available** and can receive customer booking dispatches.
+4. Open the **Operations Console** (`/admin` → **Provider Verifications** tab).
+5. Review the evidence through the approved offline process and enter the verification outcome and audit notes in the console.
+6. Click **Approve Partner** only after the required checks are complete.
+7. Once approved, partners toggle their status to **Available** and can receive customer booking dispatches.
 
 ---
 
