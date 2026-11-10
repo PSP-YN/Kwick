@@ -99,6 +99,11 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         .map((item) => item.toString())
         .toList();
     final urgency = diagnosis['urgency']?.toString() ?? 'routine';
+    if (urgency == 'emergency' && safetyAlerts.isEmpty) {
+      safetyAlerts.add(
+        'Potential immediate danger. Keep away from the hazard and contact local emergency services or the relevant utility.',
+      );
+    }
 
     return Container(
       margin: const EdgeInsets.only(top: AppSpacing.md),
@@ -124,7 +129,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               Text(
                 urgency.toUpperCase(),
                 style: AppTextStyles.label.copyWith(
-                  color: urgency == 'emergency'
+                  color: urgency == 'emergency' || urgency == 'urgent'
                       ? AppColors.error
                       : AppColors.primary,
                 ),
@@ -138,7 +143,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Suggested category: ${diagnosis['category'] ?? 'other'} · Confidence: ${diagnosis['confidence'] ?? 'low'}',
+            'Suggested category: ${diagnosis['category'] ?? 'other'} · Model confidence: ${diagnosis['confidence'] ?? 'low'}',
             style: AppTextStyles.bodySmall,
           ),
           if (safetyAlerts.isNotEmpty) ...[
