@@ -287,11 +287,11 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
 type AuthStatus = 'checking' | 'signed_out' | 'authorized' | 'denied' | 'configuration_error';
 
 export default function AdminPage() {
-  const [authStatus, setAuthStatus] = useState<AuthStatus>('checking');
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(isSupabaseConfigured ? 'checking' : 'configuration_error');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [userEmail, setUserEmail] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(isSupabaseConfigured ? null : 'Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to connect the operations console.');
   const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
@@ -325,20 +325,19 @@ export default function AdminPage() {
     };
 
     if (!isSupabaseConfigured) {
-      setAuthStatus('configuration_error');
-      setAuthError('Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to connect the operations console.');
-    } else {
-      supabase.auth.getSession().then(({ data, error }) => {
-        if (error) {
-          if (active) {
-            setAuthError(error.message);
-            setAuthStatus('signed_out');
-          }
-          return;
-        }
-        void verifySession(data.session);
-      });
+      return () => { active = false; };
     }
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        if (active) {
+          setAuthError(error.message);
+          setAuthStatus('signed_out');
+        }
+        return;
+      }
+      void verifySession(data.session);
+    });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       void verifySession(session);
