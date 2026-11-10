@@ -26,6 +26,7 @@ Files:
 5. `supabase/migrations/20261111000005_harden_admin_bootstrap.sql` (privileged bootstrap hardening)
 6. `supabase/migrations/20261111000006_auth_provisioning_and_write_privileges.sql` (Auth provisioning and least-privilege writes)
 7. `supabase/migrations/20261111000007_dispatch_provider_invariants.sql` (provider assignment invariants)
+8. `supabase/migrations/20261111000008_ai_diagnosis_usage.sql` (private AI usage quota log)
 
 ### 2.2 Storage Buckets & Policies
 Verify the two private buckets are provisioned:
@@ -97,3 +98,16 @@ The console exposes:
 - Manual Dispatch queue with provider allocation modal.
 - Identity and trade license verification audit log.
 - Emergency override tool with mandatory reason logging.
+
+
+## AI Diagnosis Function
+
+The optional customer issue-triage feature requires a server-side Gemini API key. Never place this key in Flutter, the web app, or source control.
+
+```bash
+supabase secrets set GEMINI_API_KEY=your_key
+supabase secrets set GEMINI_MODEL=gemini-2.5-flash
+supabase functions deploy diagnose-service
+```
+
+The function requires an authenticated Supabase user, applies a per-user hourly usage limit, does not persist raw issue descriptions, and returns advisory triage only. Customers can still submit bookings when AI is unavailable.
