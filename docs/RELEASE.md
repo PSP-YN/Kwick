@@ -27,6 +27,7 @@ Files:
 6. `supabase/migrations/20261111000006_auth_provisioning_and_write_privileges.sql` (Auth provisioning and least-privilege writes)
 7. `supabase/migrations/20261111000007_dispatch_provider_invariants.sql` (provider assignment invariants)
 8. `supabase/migrations/20261111000008_ai_diagnosis_usage.sql` (private AI usage quota log)
+9. `supabase/migrations/20261111000009_harden_definer_helpers.sql` (SECURITY DEFINER helper hardening)
 
 ### 2.2 Storage Buckets & Policies
 Verify the two private buckets are provisioned:
