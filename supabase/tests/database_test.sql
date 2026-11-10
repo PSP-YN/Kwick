@@ -50,6 +50,7 @@ COMMIT;
 \i supabase/migrations/20261023000004_seed_pilot_data.sql
 \i supabase/migrations/20261111000005_harden_admin_bootstrap.sql
 \i supabase/migrations/20261111000006_auth_provisioning_and_write_privileges.sql
+\i supabase/migrations/20261111000007_dispatch_provider_invariants.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
@@ -70,6 +71,7 @@ DECLARE
     v_unrelated_prov_pk UUID;
     v_request_id UUID;
     v_assignment_id UUID;
+    v_second_request_id UUID;
     v_failed BOOLEAN;
 BEGIN
     RAISE NOTICE '>>> Starting NexHelp Automated Test Suite <<<';
@@ -159,6 +161,25 @@ BEGIN
     ASSERT (SELECT status FROM public.assignments WHERE id = v_assignment_id) = 'offered', 'Test 5 Failed: Assignment status not offered';
     RAISE NOTICE '[PASS] Test 5: Provider approved and assigned successfully';
 
+    -- Test 5b: A provider cannot receive a second active offer for another request.
+    PERFORM set_config('request.jwt.claim.sub', v_customer_a_id::text, true);
+    v_second_request_id := public.create_service_request(
+        p_category_id := v_cat_plumbing,
+        p_service_area_id := v_pilot_area,
+        p_description := 'Bathroom tap is dripping and needs inspection',
+        p_address_line := '#142, 5th Cross, 19th Main, HSR Layout Sector 1',
+        p_pincode := '560102'
+    );
+    PERFORM set_config('request.jwt.claim.sub', v_admin_id::text, true);
+    v_failed := false;
+    BEGIN
+        PERFORM public.assign_provider_to_request(v_second_request_id, v_provider_id, 32000);
+    EXCEPTION WHEN unique_violation THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed = true, 'Test 5b Failed: Provider received multiple active offers';
+    RAISE NOTICE '[PASS] Test 5b: One active assignment per provider enforced';
+
     -- ------------------------------------------------------------------------
     -- Test 6: Invariant Test — Duplicate Active Assignment Prevented
     -- ------------------------------------------------------------------------
@@ -189,7 +210,15 @@ BEGIN
     ASSERT (SELECT status FROM public.assignments WHERE id = v_assignment_id) = 'accepted', 'Test 7 Failed: Assignment not accepted';
     ASSERT (SELECT status FROM public.service_requests WHERE id = v_request_id) = 'accepted', 'Test 7 Failed: Request not accepted';
     ASSERT (SELECT availability_status FROM public.providers WHERE id = v_provider_id) = 'busy', 'Test 7 Failed: Provider not busy';
-    RAISE NOTICE '[PASS] Test 7: Provider accept transition and busy availability verified';
+
+    v_failed := false;
+    BEGIN
+        PERFORM public.assign_provider_to_request(v_second_request_id, v_provider_id, 32000);
+    EXCEPTION WHEN SQLSTATE 'P0006' THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed = true, 'Test 7 Failed: Busy provider was assigned another request';
+    RAISE NOTICE '[PASS] Test 7: Provider accept transition and busy dispatch guard verified';
 
     -- ------------------------------------------------------------------------
     -- Test 8: Job Progression Lifecycle to Completion
