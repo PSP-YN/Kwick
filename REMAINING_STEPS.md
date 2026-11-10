@@ -35,7 +35,7 @@
    # Link to your remote project
    supabase link --project-ref <your-project-ref>
 
-   # Push all 7 migrations to production PostgreSQL
+   # Push all 8 migrations to production PostgreSQL
    supabase db push
    ```
 5. Verify in Supabase Dashboard:
