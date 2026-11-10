@@ -35,7 +35,7 @@
    # Link to your remote project
    supabase link --project-ref <your-project-ref>
 
-   # Push all 9 migrations to production PostgreSQL
+   # Push all 10 migrations to production PostgreSQL
    supabase db push
    ```
 5. Verify in Supabase Dashboard:
@@ -189,5 +189,5 @@ For the initial launch in Bengaluru South (HSR Layout & Koramangala 560102):
 - Review the latest GitHub Actions run for the exact branch head before treating Flutter, database, admin, or Edge Function checks as passing.
 - A dedicated NexHelp Supabase project is not configured yet. Do not reuse the existing CareerOS or JanaSetu projects.
 - Gemini live calls are not verified until the Edge Function is deployed to the dedicated project with a server-side `GEMINI_API_KEY`.
-- The AI usage quota currently uses a count-then-insert flow; replace it with an atomic reservation RPC before high-concurrency production rollout.
+- AI usage quotas now use an atomic per-user reservation RPC; validate this migration in the dedicated cloud project before launch.
 - In-app provider document upload remains future work; the pilot requires documented manual verification.
