@@ -25,7 +25,6 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
   const [activeTab, setActiveTab] = useState<'overview' | 'dispatch' | 'providers' | 'disputes'>('overview');
   const [metrics, setMetrics] = useState<AdminMetrics>({
     pending_requests: 0,
-    matched_requests: 0,
     active_jobs: 0,
     completed_today: 0,
     verified_providers: 0,
