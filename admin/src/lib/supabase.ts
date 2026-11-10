@@ -30,7 +30,7 @@ export async function fetchAdminMetrics(): Promise<AdminMetrics> {
   ]);
   results.forEach((result) => throwIfError(result.error));
   return {
-    pending_requests: results[0].count || 0, matched_requests: 0,
+    pending_requests: results[0].count || 0,
     active_jobs: results[1].count || 0, completed_today: results[2].count || 0,
     verified_providers: results[3].count || 0, pending_verifications: results[4].count || 0,
   };
