@@ -441,6 +441,13 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   },
                 ),
                 const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Your issue description is sent to Gemini for triage. Do not include names, phone numbers or your address.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
                 OutlinedButton.icon(
                   onPressed: _isDiagnosing || _isSubmitting
                       ? null
