@@ -39,7 +39,7 @@ export async function fetchAdminMetrics(): Promise<AdminMetrics> {
 export async function fetchServiceRequests(): Promise<ServiceRequest[]> {
   assertSupabaseConfigured();
   const { data, error } = await supabase.from('service_requests').select(`
-    id, customer_id, category_id, pincode, address_line, description, status,
+    id, customer_id, category_id, pincode, address_line, description, customer_notes, status,
     quoted_price_minor, final_price_minor, created_at, scheduled_at, service_categories(name)
   `).order('created_at', { ascending: false });
   throwIfError(error);
@@ -67,7 +67,7 @@ export async function fetchServiceRequests(): Promise<ServiceRequest[]> {
       id: row.id, customer_id: row.customer_id, customer_name: profile?.full_name || 'Customer',
       customer_phone: profile?.phone || undefined, category_id: row.category_id,
       category_name: category?.name || 'General', pincode: row.pincode, address_line1: row.address_line,
-      description: row.description, status: row.status as OrderStatus,
+      description: row.description, customer_notes: row.customer_notes, status: row.status as OrderStatus,
       estimated_price_paise: toPaise(row.quoted_price_minor), final_price_paise: toPaise(row.final_price_minor),
       created_at: row.created_at, scheduled_for: row.scheduled_at || undefined,
       current_provider_id: assignment?.providerId, current_provider_name: assignment?.name,
