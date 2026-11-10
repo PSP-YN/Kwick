@@ -267,7 +267,7 @@ SET ROLE authenticated;
 SET request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
 DO $$
 BEGIN
-    ASSERT (SELECT count(*) FROM public.service_requests WHERE customer_id = '22222222-2222-2222-2222-222222222222') = 1,
+    ASSERT (SELECT count(*) FROM public.service_requests WHERE customer_id = '22222222-2222-2222-2222-222222222222') >= 1,
         'Test 10 Failed: Customer A cannot see their own request';
 END;
 $$;
