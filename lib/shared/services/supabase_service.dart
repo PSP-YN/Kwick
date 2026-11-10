@@ -46,8 +46,9 @@ class SupabaseService {
         data: {
           'full_name': fullName,
           'phone': phone,
-          'initial_role':
-              initialRole == UserRole.provider ? 'provider' : 'customer',
+          'initial_role': initialRole == UserRole.provider
+              ? 'provider'
+              : 'customer',
         },
       );
     } on AuthException catch (e) {
