@@ -1,6 +1,6 @@
 # NexHelp — Remaining User Action Items & Production Launch Checklist
 
-> **Purpose:** Everything in the codebase (mobile app, authoritative database, security policies, operations portal, test suites, and CI workflows) is fully built and tested. This document contains **only** the external manual steps that you (the project owner) need to perform to launch NexHelp into production.
+> **Purpose:** This checklist records external production setup and release tasks. It is not a claim that every feature has been independently verified. Review the latest CI results and the engineering audit before treating NexHelp as production-ready.
 
 ---
 
@@ -35,7 +35,7 @@
    # Link to your remote project
    supabase link --project-ref <your-project-ref>
 
-   # Push all 4 migrations to production PostgreSQL
+   # Push all 5 migrations to production PostgreSQL
    supabase db push
    ```
 5. Verify in Supabase Dashboard:
@@ -178,4 +178,4 @@ For the initial launch in Bengaluru South (HSR Layout & Koramangala 560102):
 
 ---
 
-*This document is the single source of truth for all remaining manual human steps. Everything else in the repository is built, tested, and ready.*
+*This document is the single source of truth for all remaining manual human steps. Remaining engineering work and test status must be checked against the latest branch CI and audit notes before launch.*
