@@ -1,449 +1,160 @@
 import { createClient } from '@supabase/supabase-js';
 import { ServiceRequest, ProviderProfile, SupportTicket, AdminMetrics, OrderStatus } from '../types';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.dummy';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const supabase = createClient(supabaseUrl || 'http://127.0.0.1:54321', supabaseAnonKey || 'missing-local-development-key');
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Realistic pilot data for Bengaluru South (HSR Layout / Koramangala 560102)
-const MOCK_REQUESTS: ServiceRequest[] = [
-  {
-    id: 'req-001',
-    customer_id: 'cust-101',
-    customer_name: 'Rahul Sharma',
-    customer_phone: '+91 98765 43210',
-    category_id: 'cat-plumbing',
-    category_name: 'Plumbing',
-    pincode: '560102',
-    address_line1: 'Flat 402, Green Glen Layout, HSR Sector 2',
-    landmark: 'Opposite CPWD Complex',
-    description: 'Kitchen sink pipe leaking continuously under the counter.',
-    status: 'submitted',
-    estimated_price_paise: 39900,
-    created_at: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-    scheduled_for: new Date(Date.now() + 2 * 3600 * 1000).toISOString(),
-  },
-  {
-    id: 'req-002',
-    customer_id: 'cust-102',
-    customer_name: 'Priya Narayanan',
-    customer_phone: '+91 98765 11223',
-    category_id: 'cat-electrical',
-    category_name: 'Electrical',
-    pincode: '560102',
-    address_line1: 'House #88, 14th Main, HSR Sector 1',
-    landmark: 'Near Agara Lake',
-    description: 'Main MCB keeps tripping whenever geyser or AC is switched on.',
-    status: 'submitted',
-    estimated_price_paise: 44900,
-    created_at: new Date(Date.now() - 50 * 60 * 1000).toISOString(),
-    scheduled_for: new Date(Date.now() + 3 * 3600 * 1000).toISOString(),
-  },
-  {
-    id: 'req-003',
-    customer_id: 'cust-103',
-    customer_name: 'Arjun Mehta',
-    customer_phone: '+91 98765 99887',
-    category_id: 'cat-plumbing',
-    category_name: 'Plumbing',
-    pincode: '560102',
-    address_line1: 'Villa 12, Sobha Iris, HSR Sector 4',
-    landmark: 'Behind BDA Complex',
-    description: 'Bathroom shower mixer replacement and pressure check.',
-    status: 'assigned',
-    estimated_price_paise: 49900,
-    created_at: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
-    scheduled_for: new Date(Date.now() + 1 * 3600 * 1000).toISOString(),
-    current_provider_id: 'pro-201',
-    current_provider_name: 'Ramesh Kumar (Plumber)',
-  },
-  {
-    id: 'req-004',
-    customer_id: 'cust-104',
-    customer_name: 'Deepa V.',
-    customer_phone: '+91 98765 77665',
-    category_id: 'cat-electrical',
-    category_name: 'Electrical',
-    pincode: '560102',
-    address_line1: 'Apartment 3B, Sunshine Apts, 27th Main HSR',
-    description: 'Ceiling fan making squeaking noise and regulator broken.',
-    status: 'in_progress',
-    estimated_price_paise: 29900,
-    created_at: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
-    current_provider_id: 'pro-202',
-    current_provider_name: 'Suresh Gowda (Electrician)',
-  },
-  {
-    id: 'req-005',
-    customer_id: 'cust-105',
-    customer_name: 'Kavita Pillai',
-    customer_phone: '+91 98765 33445',
-    category_id: 'cat-plumbing',
-    category_name: 'Plumbing',
-    pincode: '560102',
-    address_line1: 'Plot 45, Teacher Colony, HSR Sector 5',
-    description: 'Water inlet valve replacement for washing machine.',
-    status: 'completed',
-    estimated_price_paise: 34900,
-    final_price_paise: 34900,
-    created_at: new Date(Date.now() - 360 * 60 * 1000).toISOString(),
-    current_provider_id: 'pro-201',
-    current_provider_name: 'Ramesh Kumar (Plumber)',
-  },
-];
-
-const MOCK_PROVIDERS: ProviderProfile[] = [
-  {
-    id: 'pro-201',
-    user_id: 'usr-pro-01',
-    full_name: 'Ramesh Kumar',
-    phone: '+91 91234 56789',
-    experience_years: 7,
-    verification_status: 'approved',
-    availability_status: 'available',
-    categories: ['Plumbing'],
-    rating_average: 4.8,
-    total_jobs_completed: 142,
-    id_document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=400&q=80',
-    trade_license_url: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=400&q=80',
-    verification_notes: 'Aadhaar verified and field background checked on 2026-10-01.',
-    created_at: '2026-10-01T10:00:00Z',
-  },
-  {
-    id: 'pro-202',
-    user_id: 'usr-pro-02',
-    full_name: 'Suresh Gowda',
-    phone: '+91 91234 56790',
-    experience_years: 5,
-    verification_status: 'approved',
-    availability_status: 'busy',
-    categories: ['Electrical'],
-    rating_average: 4.9,
-    total_jobs_completed: 89,
-    id_document_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-    trade_license_url: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=400&q=80',
-    verification_notes: 'Karnataka Electrical Inspectorate wireman permit verified.',
-    created_at: '2026-10-05T11:30:00Z',
-  },
-  {
-    id: 'pro-203',
-    user_id: 'usr-pro-03',
-    full_name: 'Manjunath Reddy',
-    phone: '+91 91234 56791',
-    experience_years: 4,
-    verification_status: 'under_review',
-    availability_status: 'offline',
-    categories: ['Plumbing'],
-    rating_average: 0.0,
-    total_jobs_completed: 0,
-    id_document_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-    trade_license_url: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=400&q=80',
-    verification_notes: 'Awaiting secondary address check.',
-    created_at: '2026-10-21T09:15:00Z',
-  },
-  {
-    id: 'pro-204',
-    user_id: 'usr-pro-04',
-    full_name: 'Anand Kumar Swamy',
-    phone: '+91 91234 56792',
-    experience_years: 9,
-    verification_status: 'submitted',
-    availability_status: 'offline',
-    categories: ['Electrical'],
-    rating_average: 0.0,
-    total_jobs_completed: 0,
-    id_document_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80',
-    trade_license_url: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=400&q=80',
-    created_at: '2026-10-22T14:45:00Z',
-  },
-];
-
-const MOCK_TICKETS: SupportTicket[] = [
-  {
-    id: 'tkt-001',
-    service_request_id: 'req-003',
-    reporter_id: 'cust-103',
-    reporter_role: 'customer',
-    subject: 'Provider delayed by 30 mins',
-    description: 'Provider was supposed to reach by 3:00 PM but messaged traffic near Silk Board.',
-    status: 'open',
-    created_at: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'tkt-002',
-    service_request_id: 'req-005',
-    reporter_id: 'cust-105',
-    reporter_role: 'customer',
-    subject: 'Request invoice copy for tax',
-    description: 'Please email the GST invoice for the washing machine repair.',
-    status: 'resolved',
-    resolution_notes: 'Invoice PDF generated and dispatched via email.',
-    created_at: new Date(Date.now() - 280 * 60 * 1000).toISOString(),
-  },
-];
-
-// In-memory store for interactive dashboard actions
-let requestsState = [...MOCK_REQUESTS];
-let providersState = [...MOCK_PROVIDERS];
-const ticketsState = [...MOCK_TICKETS];
-
-interface RawRequestRow {
-  id: string;
-  customer_id: string;
-  category_id: string;
-  pincode: string;
-  address_line1: string;
-  landmark?: string;
-  description: string;
-  status: OrderStatus;
-  estimated_price_paise: number;
-  final_price_paise?: number;
-  created_at: string;
-  scheduled_for?: string;
-  service_categories?: { name: string } | null;
+function assertSupabaseConfigured(): void {
+  if (!isSupabaseConfigured) throw new Error('NexHelp Operations is not connected. Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
 }
-
-interface RawProviderRow {
-  id: string;
-  user_id: string;
-  experience_years: number;
-  verification_status: import('../types').VerificationStatus;
-  availability_status: import('../types').AvailabilityStatus;
-  rating_average: number;
-  total_jobs_completed: number;
-  id_document_url?: string;
-  trade_license_url?: string;
-  verification_notes?: string;
-  created_at: string;
-  user_profiles?: { full_name: string; phone: string } | null;
+function throwIfError(error: { message: string } | null): void {
+  if (error) throw new Error(error.message);
+}
+function toPaise(value: number | string | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 export async function fetchAdminMetrics(): Promise<AdminMetrics> {
-  try {
-    const { count: pendingCount } = await supabase
-      .from('service_requests')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['submitted', 'matched']);
-
-    const { count: activeJobsCount } = await supabase
-      .from('service_requests')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['assigned', 'in_progress']);
-
-    const { count: completedTodayCount } = await supabase
-      .from('service_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'completed');
-
-    const { count: verifiedProsCount } = await supabase
-      .from('provider_profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('verification_status', 'approved');
-
-    const { count: pendingProsCount } = await supabase
-      .from('provider_profiles')
-      .select('*', { count: 'exact', head: true })
-      .in('verification_status', ['submitted', 'under_review']);
-
-    if (pendingCount !== null) {
-      return {
-        pending_requests: pendingCount || 0,
-        matched_requests: 0,
-        active_jobs: activeJobsCount || 0,
-        completed_today: completedTodayCount || 0,
-        verified_providers: verifiedProsCount || 0,
-        pending_verifications: pendingProsCount || 0,
-      };
-    }
-  } catch (err) {
-    console.warn('Using in-memory admin metrics fallback:', err);
-  }
-
-  // Fallback to active state
+  assertSupabaseConfigured();
+  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+  const results = await Promise.all([
+    supabase.from('service_requests').select('id', { count: 'exact', head: true }).in('status', ['requested', 'reviewing']),
+    supabase.from('service_requests').select('id', { count: 'exact', head: true }).in('status', ['assigned', 'accepted', 'travelling', 'in_progress']),
+    supabase.from('service_requests').select('id', { count: 'exact', head: true }).eq('status', 'completed').gte('updated_at', startOfDay.toISOString()),
+    supabase.from('providers').select('id', { count: 'exact', head: true }).eq('verification_status', 'approved'),
+    supabase.from('providers').select('id', { count: 'exact', head: true }).eq('verification_status', 'pending'),
+  ]);
+  results.forEach((result) => throwIfError(result.error));
   return {
-    pending_requests: requestsState.filter((r) => r.status === 'submitted').length,
-    matched_requests: requestsState.filter((r) => r.status === 'matched').length,
-    active_jobs: requestsState.filter((r) => ['assigned', 'in_progress'].includes(r.status)).length,
-    completed_today: requestsState.filter((r) => r.status === 'completed').length,
-    verified_providers: providersState.filter((p) => p.verification_status === 'approved').length,
-    pending_verifications: providersState.filter((p) => ['submitted', 'under_review'].includes(p.verification_status)).length,
+    pending_requests: results[0].count || 0, matched_requests: 0,
+    active_jobs: results[1].count || 0, completed_today: results[2].count || 0,
+    verified_providers: results[3].count || 0, pending_verifications: results[4].count || 0,
   };
 }
 
 export async function fetchServiceRequests(): Promise<ServiceRequest[]> {
-  try {
-    const { data, error } = await supabase
-      .from('service_requests')
-      .select(`
-        id, customer_id, category_id, pincode, address_line1, landmark, description,
-        status, estimated_price_paise, final_price_paise, created_at, scheduled_for,
-        service_categories(name)
-      `)
-      .order('created_at', { ascending: false });
-
-    if (!error && data && data.length > 0) {
-      return (data as unknown as RawRequestRow[]).map((row) => ({
-        id: row.id,
-        customer_id: row.customer_id,
-        customer_name: 'NexHelp User',
-        customer_phone: '+91 98765 00000',
-        category_id: row.category_id,
-        category_name: row.service_categories?.name || 'General',
-        pincode: row.pincode,
-        address_line1: row.address_line1,
-        landmark: row.landmark,
-        description: row.description,
-        status: row.status,
-        estimated_price_paise: row.estimated_price_paise,
-        final_price_paise: row.final_price_paise,
-        created_at: row.created_at,
-        scheduled_for: row.scheduled_for,
-      }));
-    }
-  } catch (err) {
-    console.warn('Using in-memory service requests fallback:', err);
+  assertSupabaseConfigured();
+  const { data, error } = await supabase.from('service_requests').select(`
+    id, customer_id, category_id, pincode, address_line, description, status,
+    quoted_price_minor, final_price_minor, created_at, scheduled_at, service_categories(name)
+  `).order('created_at', { ascending: false });
+  throwIfError(error);
+  if (!data?.length) return [];
+  const customerIds = [...new Set(data.map((row) => row.customer_id))];
+  const requestIds = data.map((row) => row.id);
+  const [profilesResult, assignmentsResult] = await Promise.all([
+    supabase.from('profiles').select('id, full_name, phone').in('id', customerIds),
+    supabase.from('assignments').select('request_id, provider_id, status, providers(id, profile_id, profiles(full_name))')
+      .in('request_id', requestIds).in('status', ['offered', 'accepted', 'completed']),
+  ]);
+  throwIfError(profilesResult.error); throwIfError(assignmentsResult.error);
+  const profiles = new Map((profilesResult.data || []).map((profile) => [profile.id, profile]));
+  const assignments = new Map<string, { providerId: string; name?: string }>();
+  for (const row of assignmentsResult.data || []) {
+    const provider = Array.isArray(row.providers) ? row.providers[0] : row.providers;
+    const nestedProfile = provider && (Array.isArray(provider.profiles) ? provider.profiles[0] : provider.profiles);
+    assignments.set(row.request_id, { providerId: row.provider_id, name: nestedProfile?.full_name || undefined });
   }
-
-  return [...requestsState];
+  return data.map((row) => {
+    const profile = profiles.get(row.customer_id);
+    const category = Array.isArray(row.service_categories) ? row.service_categories[0] : row.service_categories;
+    const assignment = assignments.get(row.id);
+    return {
+      id: row.id, customer_id: row.customer_id, customer_name: profile?.full_name || 'Customer',
+      customer_phone: profile?.phone || undefined, category_id: row.category_id,
+      category_name: category?.name || 'General', pincode: row.pincode, address_line1: row.address_line,
+      description: row.description, status: row.status as OrderStatus,
+      estimated_price_paise: toPaise(row.quoted_price_minor), final_price_paise: toPaise(row.final_price_minor),
+      created_at: row.created_at, scheduled_for: row.scheduled_at || undefined,
+      current_provider_id: assignment?.providerId, current_provider_name: assignment?.name,
+    };
+  });
 }
 
 export async function fetchProviders(): Promise<ProviderProfile[]> {
-  try {
-    const { data, error } = await supabase
-      .from('provider_profiles')
-      .select(`
-        id, user_id, experience_years, verification_status, availability_status,
-        rating_average, total_jobs_completed, id_document_url, trade_license_url,
-        verification_notes, created_at,
-        user_profiles(full_name, phone)
-      `)
-      .order('created_at', { ascending: false });
-
-    if (!error && data && data.length > 0) {
-      return (data as unknown as RawProviderRow[]).map((row) => ({
-        id: row.id,
-        user_id: row.user_id,
-        full_name: row.user_profiles?.full_name || 'Service Partner',
-        phone: row.user_profiles?.phone || '+91 90000 00000',
-        experience_years: row.experience_years,
-        verification_status: row.verification_status,
-        availability_status: row.availability_status,
-        categories: ['General'],
-        rating_average: Number(row.rating_average) || 0,
-        total_jobs_completed: row.total_jobs_completed || 0,
-        id_document_url: row.id_document_url,
-        trade_license_url: row.trade_license_url,
-        verification_notes: row.verification_notes,
-        created_at: row.created_at,
-      }));
-    }
-  } catch (err) {
-    console.warn('Using in-memory providers fallback:', err);
-  }
-
-  return [...providersState];
+  assertSupabaseConfigured();
+  const { data, error } = await supabase.from('providers').select(`
+    id, profile_id, experience_years, verification_status, availability_status, verification_notes, created_at,
+    profiles(full_name, phone), provider_services(is_active, service_categories(name)),
+    provider_documents(document_type, storage_path, verification_status)
+  `).order('created_at', { ascending: false });
+  throwIfError(error); if (!data?.length) return [];
+  const ids = data.map((provider) => provider.id);
+  const [reviewsResult, completedResult] = await Promise.all([
+    supabase.from('reviews').select('provider_id, rating').in('provider_id', ids).eq('moderation_status', 'published'),
+    supabase.from('assignments').select('provider_id').in('provider_id', ids).eq('status', 'completed'),
+  ]);
+  throwIfError(reviewsResult.error); throwIfError(completedResult.error);
+  const ratings = new Map<string, number[]>(); const completed = new Map<string, number>();
+  for (const review of reviewsResult.data || []) ratings.set(review.provider_id, [...(ratings.get(review.provider_id) || []), Number(review.rating)]);
+  for (const assignment of completedResult.data || []) completed.set(assignment.provider_id, (completed.get(assignment.provider_id) || 0) + 1);
+  return Promise.all(data.map(async (provider) => {
+    const profile = Array.isArray(provider.profiles) ? provider.profiles[0] : provider.profiles;
+    const categories = (provider.provider_services || []).filter((service) => service.is_active).map((service) => {
+      const category = Array.isArray(service.service_categories) ? service.service_categories[0] : service.service_categories;
+      return category?.name;
+    }).filter((name): name is string => Boolean(name));
+    const docs = provider.provider_documents || [];
+    const signedUrl = async (path?: string) => {
+      if (!path) return undefined;
+      const result = await supabase.storage.from('provider-documents').createSignedUrl(path, 300);
+      throwIfError(result.error); return result.data.signedUrl;
+    };
+    const idDoc = docs.find((doc) => doc.document_type === 'id_proof');
+    const tradeDoc = docs.find((doc) => doc.document_type === 'trade_certification');
+    const providerRatings = ratings.get(provider.id) || [];
+    return {
+      id: provider.id, user_id: provider.profile_id, full_name: profile?.full_name || 'Service Partner',
+      phone: profile?.phone || '', experience_years: provider.experience_years,
+      verification_status: provider.verification_status as ProviderProfile['verification_status'],
+      availability_status: provider.availability_status as ProviderProfile['availability_status'],
+      categories: categories.length ? categories : ['Unspecified'],
+      rating_average: providerRatings.length ? providerRatings.reduce((sum, rating) => sum + rating, 0) / providerRatings.length : 0,
+      total_jobs_completed: completed.get(provider.id) || 0,
+      id_document_url: await signedUrl(idDoc?.storage_path), trade_license_url: await signedUrl(tradeDoc?.storage_path),
+      verification_notes: provider.verification_notes || undefined, created_at: provider.created_at,
+    };
+  }));
 }
 
 export async function fetchSupportTickets(): Promise<SupportTicket[]> {
-  try {
-    const { data, error } = await supabase
-      .from('support_tickets')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!error && data && data.length > 0) {
-      return data as SupportTicket[];
-    }
-  } catch (err) {
-    console.warn('Using in-memory support tickets fallback:', err);
-  }
-
-  return [...ticketsState];
+  assertSupabaseConfigured();
+  const { data, error } = await supabase.from('support_tickets')
+    .select('id, request_id, user_id, issue_category, description, status, resolution_notes, created_at')
+    .order('created_at', { ascending: false });
+  throwIfError(error); if (!data?.length) return [];
+  const ids = [...new Set(data.map((ticket) => ticket.user_id))];
+  const rolesResult = await supabase.from('user_roles').select('user_id, role').in('user_id', ids);
+  throwIfError(rolesResult.error);
+  const roles = new Map((rolesResult.data || []).map((role) => [role.user_id, role.role]));
+  return data.map((ticket) => ({
+    id: ticket.id, service_request_id: ticket.request_id, reporter_id: ticket.user_id,
+    reporter_role: roles.get(ticket.user_id) === 'provider' ? 'provider' : 'customer',
+    subject: ticket.issue_category.replaceAll('_', ' '), description: ticket.description,
+    status: ticket.status, resolution_notes: ticket.resolution_notes || undefined, created_at: ticket.created_at,
+  }));
 }
 
 export async function assignProviderRpc(requestId: string, providerId: string): Promise<{ success: boolean; message: string }> {
-  try {
-    const { data, error } = await supabase.rpc('assign_provider_to_request', {
-      p_request_id: requestId,
-      p_provider_id: providerId,
-    });
-    if (error) throw error;
-    return { success: true, message: `Provider assigned successfully (Assignment ID: ${data})` };
-  } catch {
-    // Update local interactive state for testing
-    const pro = providersState.find((p) => p.id === providerId);
-    requestsState = requestsState.map((r) =>
-      r.id === requestId
-        ? {
-            ...r,
-            status: 'assigned',
-            current_provider_id: providerId,
-            current_provider_name: pro ? `${pro.full_name} (${pro.categories.join(', ')})` : 'Assigned Provider',
-          }
-        : r
-    );
-    if (pro) {
-      pro.availability_status = 'busy';
-    }
-    return {
-      success: true,
-      message: `Assigned provider ${pro?.full_name || providerId} to request ${requestId}. State updated.`,
-    };
-  }
+  assertSupabaseConfigured();
+  const { data, error } = await supabase.rpc('assign_provider_to_request', { p_request_id: requestId, p_provider_id: providerId });
+  if (error) return { success: false, message: error.message };
+  return { success: true, message: `Provider assigned successfully (Assignment ID: ${data}).` };
 }
-
-export async function verifyProviderRpc(
-  providerId: string,
-  newStatus: 'approved' | 'rejected',
-  notes: string
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const { error } = await supabase.rpc('admin_verify_provider', {
-      p_provider_id: providerId,
-      p_new_status: newStatus,
-      p_notes: notes,
-    });
-    if (error) throw error;
-    return { success: true, message: `Provider status updated to ${newStatus}.` };
-  } catch {
-    providersState = providersState.map((p) =>
-      p.id === providerId
-        ? {
-            ...p,
-            verification_status: newStatus,
-            availability_status: newStatus === 'approved' ? 'available' : 'offline',
-            verification_notes: notes,
-          }
-        : p
-    );
-    return {
-      success: true,
-      message: `Provider status successfully set to ${newStatus}.`,
-    };
-  }
+export async function verifyProviderRpc(providerId: string, newStatus: 'approved' | 'rejected', notes: string): Promise<{ success: boolean; message: string }> {
+  assertSupabaseConfigured();
+  const { error } = await supabase.rpc('admin_verify_provider', { p_provider_id: providerId, p_status: newStatus, p_notes: notes });
+  if (error) return { success: false, message: error.message };
+  return { success: true, message: `Provider status updated to ${newStatus}.` };
 }
-
-export async function overrideRequestStatusRpc(
-  requestId: string,
-  newStatus: string,
-  reason: string
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const { error } = await supabase.rpc('admin_override_request_status', {
-      p_request_id: requestId,
-      p_new_status: newStatus,
-      p_reason: reason,
-    });
-    if (error) throw error;
-    return { success: true, message: `Status updated to ${newStatus}.` };
-  } catch {
-    requestsState = requestsState.map((r) =>
-      r.id === requestId ? { ...r, status: newStatus as OrderStatus } : r
-    );
-    return {
-      success: true,
-      message: `Emergency override applied: Request ${requestId} is now ${newStatus}.`,
-    };
-  }
+export async function overrideRequestStatusRpc(requestId: string, newStatus: OrderStatus, reason: string): Promise<{ success: boolean; message: string }> {
+  assertSupabaseConfigured();
+  if (reason.trim().length < 5) return { success: false, message: 'A documented audit reason of at least 5 characters is required.' };
+  const { error } = await supabase.rpc('admin_override_request_status', { p_request_id: requestId, p_new_status: newStatus, p_reason: reason.trim() });
+  if (error) return { success: false, message: error.message };
+  return { success: true, message: `Request status updated to ${newStatus}.` };
 }
