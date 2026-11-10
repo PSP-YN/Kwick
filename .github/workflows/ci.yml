@@ -75,3 +75,15 @@ jobs:
         run: |
           chmod +x supabase/tests/run_tests.sh
           ./supabase/tests/run_tests.sh
+
+  ai-edge-function-check:
+    name: AI Edge Function Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check diagnosis function
+        run: deno check supabase/functions/diagnose-service/index.ts
