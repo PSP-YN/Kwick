@@ -23,6 +23,7 @@ Files:
 2. `supabase/migrations/20261023000002_rls_policies.sql` (Row Level Security & lookup helpers)
 3. `supabase/migrations/20261023000003_rpc_functions.sql` (Atomic transaction RPCs)
 4. `supabase/migrations/20261023000004_seed_pilot_data.sql` (Area 560102, categories, storage buckets)
+5. `supabase/migrations/20261111000005_harden_admin_bootstrap.sql` (privileged bootstrap hardening)
 
 ### 2.2 Storage Buckets & Policies
 Verify the two private buckets are provisioned:
