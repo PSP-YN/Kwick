@@ -170,7 +170,8 @@ Because this development workstation runs Linux Fedora, macOS/Xcode is not local
 For the initial launch in Bengaluru South (HSR Layout & Koramangala 560102):
 
 1. Have 5–10 trusted plumbers and electricians download the app and sign up as **Partner**.
-2. During onboarding, they select **Plumbing** or **Electrical**, input experience years, and upload government ID.
+2. During onboarding, they select **Plumbing** or **Electrical** and input experience years.
+3. **Important current limitation:** The mobile onboarding flow does not yet include in-app ID/trade-document upload. For this pilot, collect and inspect identity/trade evidence through a secure, documented offline process before approval. Do not ask providers to upload sensitive identity documents through chat or an unapproved channel.
 3. Open the **Operations Console** (`/admin` $\to$ **Provider Verifications** tab):
    - Review uploaded documents.
    - Click **Approve Partner** and enter audit verification notes.
@@ -179,3 +180,14 @@ For the initial launch in Bengaluru South (HSR Layout & Koramangala 560102):
 ---
 
 *This document is the single source of truth for all remaining manual human steps. Remaining engineering work and test status must be checked against the latest branch CI and audit notes before launch.*
+
+
+## Current engineering status
+
+- The HackGlobal upgrade is isolated on `hackglobal/nexhelp-intelligence`; `main` has not been modified by this work.
+- The branch includes AI triage, trust-aware dispatch, additional database hardening, operations-console fixes, and HackGlobal submission assets.
+- Review the latest GitHub Actions run for the exact branch head before treating Flutter, database, admin, or Edge Function checks as passing.
+- A dedicated NexHelp Supabase project is not configured yet. Do not reuse the existing CareerOS or JanaSetu projects.
+- Gemini live calls are not verified until the Edge Function is deployed to the dedicated project with a server-side `GEMINI_API_KEY`.
+- The AI usage quota currently uses a count-then-insert flow; replace it with an atomic reservation RPC before high-concurrency production rollout.
+- In-app provider document upload remains future work; the pilot requires documented manual verification.
