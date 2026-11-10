@@ -37,9 +37,9 @@ CREATE TABLE IF NOT EXISTS storage.objects (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE OR REPLACE FUNCTION storage.foldername(name TEXT) RETURNS TEXT[] AS $
+CREATE OR REPLACE FUNCTION storage.foldername(name TEXT) RETURNS TEXT[] AS $folder$
     SELECT string_to_array(name, '/');
-$ LANGUAGE sql IMMUTABLE;
+$folder$ LANGUAGE sql IMMUTABLE;
 
 DO $roles$
 BEGIN
