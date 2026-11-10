@@ -334,8 +334,12 @@ BEGIN
     RAISE NOTICE '[PASS] Test 13: AI usage audit records are private to trusted server operations';
     ASSERT NOT has_function_privilege('anon', 'public.has_role(uuid,text)', 'EXECUTE'),
         'Test 14 Failed: anon can inspect role helper';
-    ASSERT NOT has_function_privilege('authenticated', 'public.get_provider_id_for_user(uuid)', 'EXECUTE'),
-        'Test 14 Failed: provider lookup helper is directly exposed';
+    ASSERT has_function_privilege('authenticated', 'public.get_provider_id_for_user(uuid)', 'EXECUTE'),
+        'Test 14 Failed: provider RLS lookup helper is not executable';
+    ASSERT has_function_privilege('authenticated', 'public.has_role(uuid,text)', 'EXECUTE'),
+        'Test 14 Failed: scoped role helper is not executable';
+    ASSERT NOT has_function_privilege('anon', 'public.get_provider_id_for_user(uuid)', 'EXECUTE'),
+        'Test 14 Failed: anon can invoke provider lookup helper';
     ASSERT has_function_privilege('authenticated', 'public.get_customer_request_ids(uuid)', 'EXECUTE'),
         'Test 14 Failed: RLS customer request helper unavailable';
     ASSERT has_function_privilege('authenticated', 'public.create_service_request(uuid,uuid,text,text,text,double precision,double precision,timestamp with time zone,text,text)', 'EXECUTE'),
