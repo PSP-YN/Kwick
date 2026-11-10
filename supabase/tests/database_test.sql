@@ -263,7 +263,7 @@ RESET ROLE;
 DO $$
 BEGIN
     RAISE NOTICE '[PASS] Test 10: Row-Level Security isolation strictly enforced for authenticated users';
-    RAISE NOTICE '>>> ALL 10 DATABASE & SECURITY TESTS PASSED SUCCESSFULLY! <<<';
+    RAISE NOTICE '[PASS] Test 10: RLS isolation verified; remaining security assertions execute below.';
 END;
 $$;
 
