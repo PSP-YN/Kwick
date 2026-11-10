@@ -28,7 +28,7 @@ NexHelp Intelligence helps a customer describe a home-service problem and gives 
 - The Gemini API key is stored as a Supabase Edge Function secret, never in the mobile app or repository.
 - The function writes only user ID, model ID, and timestamp to `ai_diagnosis_usage`; raw issue descriptions are not persisted in that table.
 - The usage table is inaccessible to `anon` and `authenticated`; only the server-side service role receives SELECT/INSERT privileges.
-- The current quota is five attempts per authenticated user per hour. The count-then-insert check is a best-effort limit and should be replaced by an atomic quota RPC before high-volume production use.
+- The quota is five attempts per authenticated user per rolling hour. The Edge Function reserves a slot through `public.reserve_ai_diagnosis_slot`; a transaction-scoped advisory lock serializes reservations per user. Only the Supabase `service_role` can execute the reservation RPC.
 - Gemini's free tier has usage limits and may process submitted content under Google's free-tier data terms. Do not send sensitive personal information.
 
 ## Deployment
@@ -42,8 +42,13 @@ supabase db push
 supabase functions deploy diagnose-service
 ```
 
-The project must have the eight migrations applied. Never commit the API key or service-role key.
+The project must have all ten migrations applied. Never commit the API key or service-role key.
 
 ## Model configuration
 
 The default model is `gemini-3.8-flash`. Set `GEMINI_MODEL` to another supported Gemini API model if required. The Edge Function uses the Gemini `generateContent` REST endpoint with JSON response schema enforcement.
+
+
+## Quota concurrency
+
+The Edge Function reserves each assessment through `public.reserve_ai_diagnosis_slot`. The database serializes reservations per user with a transaction-scoped advisory lock, counts the rolling one-hour window, and inserts usage metadata only when capacity remains. Browser and mobile roles cannot reserve or forge quota records.
