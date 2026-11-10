@@ -277,12 +277,18 @@ $$;
 
 -- Customer B tries to view Customer A's request (Must return 0 rows)
 SET request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
-DO $$
+DO $
 BEGIN
     ASSERT (SELECT count(*) FROM public.service_requests) = 0,
         'Test 10 Failed: Customer B can see Customer A request under RLS';
+    ASSERT (SELECT count(*) FROM public.get_customer_request_ids('22222222-2222-2222-2222-222222222222')) = 0,
+        'Test 10 Failed: Customer B can retrieve Customer A request IDs through helper RPC';
+    ASSERT (SELECT count(*) FROM public.get_assigned_provider_ids_for_customer('22222222-2222-2222-2222-222222222222')) = 0,
+        'Test 10 Failed: Customer B can retrieve Customer A provider IDs through helper RPC';
+    ASSERT (SELECT count(*) FROM public.get_assigned_request_ids_for_provider('33333333-3333-3333-3333-333333333333')) = 0,
+        'Test 10 Failed: Customer B can retrieve another provider assignment IDs';
 END;
-$$;
+$;
 
 -- Unassigned Provider tries to view Customer A's request (Must return 0 rows)
 SET request.jwt.claim.sub = '55555555-5555-5555-5555-555555555555';
