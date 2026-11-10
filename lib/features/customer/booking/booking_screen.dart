@@ -146,6 +146,24 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             'Suggested category: ${diagnosis['category'] ?? 'other'} · Model confidence: ${diagnosis['confidence'] ?? 'low'}',
             style: AppTextStyles.bodySmall,
           ),
+          if ((diagnosis['category'] == 'plumbing' &&
+                  _selectedCategoryId != AppConfig.plumbingCategoryId) ||
+              (diagnosis['category'] == 'electrical' &&
+                  _selectedCategoryId != AppConfig.electricalCategoryId)) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () => setState(() {
+                  _selectedCategoryId = diagnosis['category'] == 'plumbing'
+                      ? AppConfig.plumbingCategoryId
+                      : AppConfig.electricalCategoryId;
+                }),
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('Use suggested service category'),
+              ),
+            ),
+          ],
           if (safetyAlerts.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
             Text('Safety guidance', style: AppTextStyles.label),
