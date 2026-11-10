@@ -9,6 +9,7 @@ The NexHelp database is implemented in PostgreSQL and managed through versioned 
 - `20261023000003_rpc_functions.sql`: Transactional `SECURITY DEFINER` functions enforcing order state transitions, provider assignment, and verification.
 - `20261023000004_seed_pilot_data.sql`: Seed data for Bengaluru pilot service area, plumbing/electrical categories, and private storage buckets.
 - `20261111000005_harden_admin_bootstrap.sql`: Restricts first-admin bootstrap execution to trusted database operators.
+- `20261111000006_auth_provisioning_and_write_privileges.sql`: Provisions profiles and allowlisted roles from Auth events and narrows direct table writes.
 
 ---
 
