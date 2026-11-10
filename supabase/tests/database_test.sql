@@ -211,6 +211,7 @@ BEGIN
     ASSERT (SELECT status FROM public.service_requests WHERE id = v_request_id) = 'accepted', 'Test 7 Failed: Request not accepted';
     ASSERT (SELECT availability_status FROM public.providers WHERE id = v_provider_id) = 'busy', 'Test 7 Failed: Provider not busy';
 
+    PERFORM set_config('request.jwt.claim.sub', v_admin_id::text, true);
     v_failed := false;
     BEGIN
         PERFORM public.assign_provider_to_request(v_second_request_id, v_provider_id, 32000);
@@ -219,6 +220,8 @@ BEGIN
     END;
     ASSERT v_failed = true, 'Test 7 Failed: Busy provider was assigned another request';
     RAISE NOTICE '[PASS] Test 7: Provider accept transition and busy dispatch guard verified';
+
+    PERFORM set_config('request.jwt.claim.sub', v_provider_user_id::text, true);
 
     -- ------------------------------------------------------------------------
     -- Test 8: Job Progression Lifecycle to Completion
