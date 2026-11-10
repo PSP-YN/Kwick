@@ -10,6 +10,7 @@ The NexHelp database is implemented in PostgreSQL and managed through versioned 
 - `20261023000004_seed_pilot_data.sql`: Seed data for Bengaluru pilot service area, plumbing/electrical categories, and private storage buckets.
 - `20261111000005_harden_admin_bootstrap.sql`: Restricts first-admin bootstrap execution to trusted database operators.
 - `20261111000006_auth_provisioning_and_write_privileges.sql`: Provisions profiles and allowlisted roles from Auth events and narrows direct table writes.
+- `20261111000007_dispatch_provider_invariants.sql`: Enforces one active offer/job per provider and matching service-area eligibility.
 
 ---
 
