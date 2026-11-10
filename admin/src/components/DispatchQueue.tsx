@@ -238,6 +238,12 @@ export default function DispatchQueue({
                 <span className="font-semibold text-zinc-700">Estimate:</span>{' '}
                 {formatINR(selectedRequest.estimated_price_paise)}
               </p>
+              {selectedRequest.customer_notes && (
+                <p className="border-t border-zinc-200 pt-2 mt-2 whitespace-pre-wrap">
+                  <span className="font-semibold text-zinc-700">Customer notes / AI triage:</span>{' '}
+                  {selectedRequest.customer_notes}
+                </p>
+              )}
             </div>
 
             <div className="mb-4">
