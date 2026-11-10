@@ -37,9 +37,17 @@ CREATE TABLE IF NOT EXISTS storage.objects (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE OR REPLACE FUNCTION storage.foldername(name TEXT) RETURNS TEXT[] AS $$
+CREATE OR REPLACE FUNCTION storage.foldername(name TEXT) RETURNS TEXT[] AS $
     SELECT string_to_array(name, '/');
-$$ LANGUAGE sql IMMUTABLE;
+$ LANGUAGE sql IMMUTABLE;
+
+DO $roles$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+        CREATE ROLE service_role NOLOGIN BYPASSRLS;
+    END IF;
+END;
+$roles$;
 
 COMMIT;
 
@@ -53,6 +61,7 @@ COMMIT;
 \i supabase/migrations/20261111000007_dispatch_provider_invariants.sql
 \i supabase/migrations/20261111000008_ai_diagnosis_usage.sql
 \i supabase/migrations/20261111000009_harden_definer_helpers.sql
+\i supabase/migrations/20261111000010_atomic_ai_quota.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
@@ -310,6 +319,9 @@ $$;
 
 -- Test 11: First-admin bootstrap is not executable by untrusted API roles.
 DO $audit$
+DECLARE
+    v_i INTEGER;
+    v_reserved BOOLEAN;
 BEGIN
     ASSERT NOT has_function_privilege('anon', 'public.bootstrap_admin(uuid)', 'EXECUTE'),
         'Test 11 Failed: anon can execute bootstrap_admin';
@@ -347,6 +359,30 @@ BEGIN
     ASSERT NOT has_function_privilege('anon', 'public.create_service_request(uuid,uuid,text,text,text,double precision,double precision,timestamp with time zone,text,text)', 'EXECUTE'),
         'Test 14 Failed: anon can create service requests';
     RAISE NOTICE '[PASS] Test 14: SECURITY DEFINER helpers and RPC grants are restricted';
+    ASSERT has_function_privilege('service_role', 'public.reserve_ai_diagnosis_slot(uuid,text,integer)', 'EXECUTE'),
+        'Test 15 Failed: service_role cannot reserve AI quota';
+    ASSERT NOT has_function_privilege('authenticated', 'public.reserve_ai_diagnosis_slot(uuid,text,integer)', 'EXECUTE'),
+        'Test 15 Failed: authenticated clients can reserve AI quota directly';
+    ASSERT NOT has_function_privilege('anon', 'public.reserve_ai_diagnosis_slot(uuid,text,integer)', 'EXECUTE'),
+        'Test 15 Failed: anon can reserve AI quota';
+    FOR v_i IN 1..5 LOOP
+        SELECT public.reserve_ai_diagnosis_slot(
+            '22222222-2222-2222-2222-222222222222',
+            'gemini-3.8-flash',
+            5
+        ) INTO v_reserved;
+        ASSERT v_reserved, 'Test 15 Failed: valid AI quota slot was rejected';
+    END LOOP;
+    SELECT public.reserve_ai_diagnosis_slot(
+        '22222222-2222-2222-2222-222222222222',
+        'gemini-3.8-flash',
+        5
+    ) INTO v_reserved;
+    ASSERT NOT v_reserved, 'Test 15 Failed: AI quota allowed a sixth reservation';
+    ASSERT (SELECT count(*) FROM public.ai_diagnosis_usage
+            WHERE user_id = '22222222-2222-2222-2222-222222222222') = 5,
+        'Test 15 Failed: AI usage log count does not match successful reservations';
+    RAISE NOTICE '[PASS] Test 15: AI quota reservation is atomic and server-role-only';
 END;
 $audit$;
 
