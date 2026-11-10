@@ -27,7 +27,7 @@ export default function DispatchQueue({
 
   // Filter requests that are waiting for dispatch
   const dispatchableRequests = requests.filter((r) => {
-    const matchesStatus = r.status === 'submitted' || r.status === 'matched';
+    const matchesStatus = r.status === 'requested' || r.status === 'reviewing';
     const matchesCategory =
       filterCategory === 'all' || r.category_name.toLowerCase() === filterCategory.toLowerCase();
     const matchesSearch =
@@ -39,7 +39,7 @@ export default function DispatchQueue({
 
   // Eligible providers: approved and available
   const eligibleProviders = providers.filter(
-    (p) => p.verification_status === 'approved'
+    (p) => p.verification_status === 'approved' && p.availability_status === 'available'
   );
 
   const handleAssign = async () => {
@@ -60,8 +60,8 @@ export default function DispatchQueue({
     }
   };
 
-  const formatINR = (paise: number) => {
-    return `₹${(paise / 100).toLocaleString('en-IN')}`;
+  const formatINR = (paise: number | null) => {
+    return paise === null ? 'Not quoted' : `₹${(paise / 100).toLocaleString('en-IN')}`;
   };
 
   return (
