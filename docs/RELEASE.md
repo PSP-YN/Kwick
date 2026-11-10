@@ -106,7 +106,7 @@ The optional customer issue-triage feature requires a server-side Gemini API key
 
 ```bash
 supabase secrets set GEMINI_API_KEY=your_key
-supabase secrets set GEMINI_MODEL=gemini-2.5-flash
+supabase secrets set GEMINI_MODEL=gemini-3.8-flash
 supabase functions deploy diagnose-service
 ```
 
