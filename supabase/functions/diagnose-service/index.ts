@@ -44,7 +44,7 @@ Deno.serve(async (request) => {
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
-  const model = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
+  const model = Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash";
 
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
     return json(503, { error: "NexHelp AI service is not configured on the server." });
@@ -141,7 +141,6 @@ Deno.serve(async (request) => {
           },
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.2,
             maxOutputTokens: 700,
             responseMimeType: "application/json",
             responseSchema: schema,
