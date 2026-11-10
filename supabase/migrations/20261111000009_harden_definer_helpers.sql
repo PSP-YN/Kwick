@@ -118,6 +118,10 @@ GRANT EXECUTE ON FUNCTION public.get_assigned_request_ids_for_provider(UUID) TO 
 GRANT EXECUTE ON FUNCTION public.get_customer_request_ids(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_assigned_provider_ids_for_customer(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
+-- RLS policies call this self/admin-scoped lookup directly.
+GRANT EXECUTE ON FUNCTION public.get_provider_id_for_user(UUID) TO authenticated;
+-- Safe self/admin-only role lookup; no cross-user role enumeration.
+GRANT EXECUTE ON FUNCTION public.has_role(UUID, TEXT) TO authenticated;
 
 -- Keep the application RPC surface authenticated-only. Each function performs
 -- its own ownership or administrator authorization checks.
