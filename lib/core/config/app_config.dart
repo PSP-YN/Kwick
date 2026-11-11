@@ -43,7 +43,7 @@ class AppConfig {
   static const String pilotState = 'Karnataka';
   static const String pilotPincode = '560102';
   static const String pilotAreaName =
-      'Bengaluru South — HSR & Koramangala Pilot Sector';
+      'Bengaluru 560102 Service Zone — HSR Layout Focus';
   static const String pilotAreaId = 'a0000000-0000-0000-0000-000000000001';
 
   // Seed Categories
