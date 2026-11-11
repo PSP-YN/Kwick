@@ -165,6 +165,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   _selectedCategoryId = diagnosis['category'] == 'plumbing'
                       ? AppConfig.plumbingCategoryId
                       : AppConfig.electricalCategoryId;
+                  _aiConsentGiven = false;
                 }),
                 icon: const Icon(Icons.check_circle_outline),
                 label: const Text('Use suggested service category'),
