@@ -5,8 +5,7 @@ class AppConfig {
   static const String appName = 'NexHelp';
   static const String appTagline = 'Trusted Local Home Services';
 
-  // Supabase Configuration
-  // Can be overridden via --dart-define=SUPABASE_URL=... and --dart-define=SUPABASE_ANON_KEY=...
+  // Supply project-specific values with --dart-define at build/run time.
   static const String supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
     defaultValue: 'http://127.0.0.1:54321',
@@ -17,6 +16,18 @@ class AppConfig {
     defaultValue:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_anon_key_for_local_development',
   );
+
+  /// Prevents shipping a binary that silently points at localhost or CI placeholders.
+  static bool get hasValidSupabaseConfig {
+    final isHttpsProjectUrl = supabaseUrl.startsWith('https://') &&
+        supabaseUrl.endsWith('.supabase.co');
+    final hasPublicKey = supabaseAnonKey.startsWith('eyJ') ||
+        supabaseAnonKey.startsWith('sb_publishable_');
+    final isKnownPlaceholder = supabaseAnonKey.contains('dummy_') ||
+        supabaseAnonKey == 'ci-placeholder';
+
+    return isHttpsProjectUrl && hasPublicKey && !isKnownPlaceholder;
+  }
 
   // Pilot Region Configuration
   static const String pilotCity = 'Bengaluru';
@@ -36,5 +47,6 @@ class AppConfig {
   static const int minDescriptionLength = 10;
   static const int maxDescriptionLength = 2000;
   static const int minAddressLength = 5;
+  static const int maxAddressLength = 1000;
   static const int maxNotesLength = 1000;
 }
