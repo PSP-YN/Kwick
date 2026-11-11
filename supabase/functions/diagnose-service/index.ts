@@ -1,16 +1,30 @@
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const configuredOrigins = new Set(
+  (Deno.env.get("NEXHELP_ALLOWED_ORIGINS") || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
+);
 
-const json = (status: number, body: Record<string, unknown>) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return true; // Native mobile clients do not send browser Origin headers.
+  try {
+    return new URL(origin).origin === origin && configuredOrigins.has(origin);
+  } catch {
+    return false;
+  }
+}
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+  if (origin) headers["Access-Control-Allow-Origin"] = origin;
+  return headers;
+}
 
 const allowedCategories = ["plumbing", "electrical", "other"] as const;
 const allowedUrgencies = ["routine", "soon", "urgent", "emergency"] as const;
@@ -30,8 +44,23 @@ function asStringArray(value: unknown, maxItems = 5): string[] {
 }
 
 Deno.serve(async (request) => {
+  const origin = request.headers.get("Origin");
+  if (!isAllowedOrigin(origin)) {
+    return new Response(JSON.stringify({ error: "This application origin is not allowed." }), {
+      status: 403,
+      headers: { "Content-Type": "application/json", "Vary": "Origin" },
+    });
+  }
+  const json = (status: number, body: Record<string, unknown>) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
+    });
   if (request.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: { ...corsHeaders(origin), "Access-Control-Max-Age": "600" },
+    });
   }
   if (request.method !== "POST") return json(405, { error: "Method not allowed." });
 
@@ -54,6 +83,9 @@ Deno.serve(async (request) => {
   const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
   const model = Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash";
 
+  if (!/^[a-zA-Z0-9._-]{1,100}$/.test(model)) {
+    return json(503, { error: "The configured AI model identifier is invalid." });
+  }
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
     return json(503, { error: "NexHelp AI service is not configured on the server." });
   }
@@ -68,10 +100,19 @@ Deno.serve(async (request) => {
     return json(400, { error: "Request body must be valid JSON." });
   }
 
-  const description = asString(payload.description, 1200);
+  if (payload.description !== undefined && typeof payload.description !== "string") {
+    return json(400, { error: "Issue description must be text." });
+  }
+  if (payload.categoryHint !== undefined && payload.categoryHint !== null && typeof payload.categoryHint !== "string") {
+    return json(400, { error: "Category hint must be text." });
+  }
+  const description = typeof payload.description === "string" ? payload.description.trim() : "";
   const categoryHint = asString(payload.categoryHint, 32).toLowerCase();
   if (description.length < 10) {
     return json(400, { error: "Describe the issue in at least 10 characters." });
+  }
+  if (description.length > 2000) {
+    return json(413, { error: "Issue description must be 2000 characters or fewer." });
   }
   if (categoryHint && !allowedCategories.includes(categoryHint as typeof allowedCategories[number])) {
     return json(400, { error: "Unsupported service category hint." });
@@ -127,6 +168,8 @@ Deno.serve(async (request) => {
   };
 
   let modelResponse: Response;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20_000);
   try {
     modelResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
@@ -147,10 +190,15 @@ Deno.serve(async (request) => {
             responseSchema: schema,
           },
         }),
+        signal: controller.signal,
       },
     );
   } catch {
-    return json(502, { error: "The AI provider could not be reached. You can still submit your service request." });
+    return controller.signal.aborted
+      ? json(504, { error: "The AI assessment timed out. You can still submit your service request without AI." })
+      : json(502, { error: "The AI provider could not be reached. You can still submit your service request." });
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!modelResponse.ok) {
