@@ -20,16 +20,16 @@ NexHelp Intelligence helps a customer describe a home-service problem and gives 
 - Emergency urgency is reserved for immediate hazards such as fire, smoke, electric shock, exposed live wiring, gas smell, major flooding, or immediate risk to life.
 - Safety alerts are conservative. Users should stay away from hazards and contact local emergency services or the relevant utility when appropriate.
 - AI suggestions never change the selected category automatically; the customer can explicitly apply a supported suggestion. Booking submission always requires customer action.
-- The customer-facing UI labels the output advisory and discloses that issue text is sent to Gemini.
-- Users are instructed not to include names, phone numbers, or addresses in the issue description.
+- The customer-facing UI requires affirmative, versioned consent before the request is sent and labels the output advisory.
+- Users are instructed not to include personal or sensitive details. The Edge Function redacts obvious phone, email, Aadhaar-like and PAN-like patterns, but this is not guaranteed.
 
 ## Privacy and quota
 
 - The Gemini API key is stored as a Supabase Edge Function secret, never in the mobile app or repository.
-- The function writes only user ID, model ID, and timestamp to `ai_diagnosis_usage`; raw issue descriptions are not persisted in that table.
+- The function writes only user ID, model ID, timestamp and consent-notice version to `ai_diagnosis_usage`; raw issue descriptions are not persisted in that table.
 - The usage table is inaccessible to `anon` and `authenticated`; only the server-side service role receives SELECT/INSERT privileges.
 - The quota is five attempts per authenticated user per rolling hour. The Edge Function reserves a slot through `public.reserve_ai_diagnosis_slot`; a transaction-scoped advisory lock serializes reservations per user. Only the Supabase `service_role` can execute the reservation RPC.
-- Gemini's free tier has usage limits and may process submitted content under Google's free-tier data terms. Do not send sensitive personal information.
+- Production AI is disabled unless `GEMINI_PAID_TIER_CONFIRMED=true` is set after the operator verifies that the key belongs to a paid Gemini API project. Never send real customer content to Gemini unpaid/free-tier services: Google's terms allow unpaid-service content to be used to improve products and reviewed by humans.
 
 ## Deployment
 
@@ -38,11 +38,15 @@ Run from the repository root after linking the correct NexHelp Supabase project:
 ```bash
 supabase secrets set GEMINI_API_KEY=your_google_ai_studio_key --yes
 supabase secrets set GEMINI_MODEL=gemini-3.8-flash --yes
+# Only after verifying the API key belongs to a paid Gemini API project:
+supabase secrets set GEMINI_PAID_TIER_CONFIRMED=true --yes
+# For browser-based clients, allow exact origins only; do not use a wildcard:
+supabase secrets set NEXHELP_ALLOWED_ORIGINS=<comma-separated-exact-origins> --yes
 supabase db push --yes --remote
 supabase functions deploy diagnose-service --yes
 ```
 
-The project must have all ten migrations applied. Never commit the API key or service-role key.
+The project must have all twelve ordered migrations applied. Never commit the API key or service-role key.
 
 ## Model configuration
 
