@@ -31,7 +31,7 @@ Once the project exists:
    ```bash
    supabase login
    supabase link --project-ref <nexhelp-project-ref>
-   supabase db push
+   supabase db push --yes --remote
    ```
 3. Apply all 10 ordered migrations.
 4. Verify all application tables have RLS enabled, both private storage buckets exist, and the restricted quota RPC is executable only by `service_role`.
@@ -53,9 +53,9 @@ Before pilot:
 Set the Gemini key only as a Supabase Edge Function secret:
 
 ```bash
-supabase secrets set GEMINI_API_KEY=<secret>
-supabase secrets set GEMINI_MODEL=<supported-model-id>
-supabase functions deploy diagnose-service
+supabase secrets set GEMINI_API_KEY=<secret> --yes
+supabase secrets set GEMINI_MODEL=<supported-model-id> --yes
+supabase functions deploy diagnose-service --yes
 ```
 
 Verify the configured model against the current Gemini API account. Test authentication, invalid payloads, model errors, rate-limit exhaustion, timeout behavior, safety alerts, and the non-AI booking fallback. Never expose the Gemini key in the mobile app, browser, GitHub, or any `NEXT_PUBLIC_*` variable.
@@ -119,7 +119,7 @@ The current CI workflow does not build or sign iOS. Add a macOS/Xcode workflow, 
 
 The current provider onboarding flow collects trade and experience details but does not upload identity or trade documents.
 
-For the initial Bengaluru South pilot:
+For the initial 560102 service-zone pilot (HSR Layout focus):
 1. Define a documented checklist for identity, trade competence, contact details, and service-area eligibility.
 2. Collect and inspect evidence through an approved secure process.
 3. Record the verification outcome and audit notes in the operations console.
