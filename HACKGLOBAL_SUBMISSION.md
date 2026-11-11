@@ -103,6 +103,15 @@ Show RLS/transactional dispatch guarantees and the audit trail.
 - Show the AI function working against the configured model; do not substitute a canned response and call it live AI.
 - If Gemini is unavailable, explain the optional fallback and continue the non-AI booking flow.
 
+## Current public links and implementation status
+
+- Source repository: https://github.com/PSP-YN/NexHelp
+- Working branch / implementation PR: https://github.com/PSP-YN/NexHelp/pull/2
+- Public landing page: https://nexhelp-landing.vercel.app/
+- The landing page is a public product overview, not a functional booking demo.
+- A dedicated NexHelp Supabase project is still blocked by the organization free-project limit. Do not claim live authentication, live Gemini calls, real bookings, live dispatch, or real pilot providers until the backend and operational setup are deployed and verified.
+- The Android CI debug build is a test artifact. A signed production APK/AAB requires a live NexHelp project and private signing secrets.
+
 ## Final submission checklist
 
 - Publicly accessible GitHub repository or approved public project link.
