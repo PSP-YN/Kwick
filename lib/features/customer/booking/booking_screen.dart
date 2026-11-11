@@ -274,21 +274,28 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                 .take(2)
                 .map((item) {
                   final alert = item.toString().trim();
-                  return alert.length > 120 ? alert.substring(0, 120) : alert;
+                  return alert.length > 100 ? alert.substring(0, 100) : alert;
                 })
                 .join('; ');
         final rawDispatcherNote =
             (_diagnosis!['dispatcher_note'] ?? '').toString().trim();
-        final dispatcherNote = rawDispatcherNote.length > 250
-            ? rawDispatcherNote.substring(0, 250)
+        final dispatcherNote = rawDispatcherNote.length > 200
+            ? rawDispatcherNote.substring(0, 200)
             : rawDispatcherNote;
         noteParts.add(
-          'NexHelp AI triage (advisory). Urgency: \${_diagnosis!['urgency']}. '
+          'NexHelp AI triage (advisory). Urgency: ${_diagnosis!['urgency']}. '
           'Dispatcher: $dispatcherNote. '
-          'Safety: \${safetyAlerts.isEmpty ? 'No alerts returned' : safetyAlerts}.',
+          'Safety: ${safetyAlerts.isEmpty ? 'No alerts returned' : safetyAlerts}.',
         );
       }
       final customerNotes = noteParts.join('\n\n');
+      if (customerNotes.length > 1000) {
+        setState(() {
+          _errorMessage = 'Notes are too long. Shorten them and try again.';
+          _isSubmitting = false;
+        });
+        return;
+      }
       final supabase = ref.read(supabaseServiceProvider);
       final requestId = await supabase.createServiceRequest(
         categoryId: _selectedCategoryId!,
@@ -629,8 +636,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   controller: _notesController,
                   maxLines: 2,
                   validator: (value) =>
-                      value != null && value.trim().length > 400
-                      ? 'Notes cannot exceed 400 characters.'
+                      value != null && value.trim().length > 250
+                      ? 'Notes cannot exceed 250 characters.'
                       : null,
                 ),
                 const SizedBox(height: AppSpacing.xl),
