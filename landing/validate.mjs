@@ -6,11 +6,15 @@ const directory = fileURLToPath(new URL('.', import.meta.url));
 const html = readFileSync(resolve(directory, 'index.html'), 'utf8');
 const css = readFileSync(resolve(directory, 'styles.css'), 'utf8');
 const js = readFileSync(resolve(directory, 'app.js'), 'utf8');
+const vercel = JSON.parse(readFileSync(resolve(directory, 'vercel.json'), 'utf8'));
+const headers = vercel.headers?.[0]?.headers ?? [];
+const headerValue = (name) => headers.find((header) => header.key.toLowerCase() === name.toLowerCase())?.value ?? '';
 
 const checks = [
   ['document language', /<html lang="en">/.test(html)],
   ['responsive viewport', /name="viewport"[^>]+width=device-width/.test(html)],
   ['description metadata', /name="description"/.test(html)],
+  ['Open Graph metadata', /property="og:title"/.test(html) && /property="og:description"/.test(html)],
   ['main landmark', /<main id="main">/.test(html)],
   ['skip navigation link', /class="skip-link" href="#main"/.test(html)],
   ['how it works section', /id="how-it-works"/.test(html)],
@@ -23,6 +27,10 @@ const checks = [
   ['local stylesheet exists', existsSync(resolve(directory, 'styles.css'))],
   ['local script exists', existsSync(resolve(directory, 'app.js'))],
   ['favicon exists', existsSync(resolve(directory, 'favicon.svg'))],
+  ['crawler policy exists', existsSync(resolve(directory, 'robots.txt'))],
+  ['Content Security Policy configured', headerValue('Content-Security-Policy').includes("default-src 'self'")],
+  ['anti-sniffing header configured', headerValue('X-Content-Type-Options') === 'nosniff'],
+  ['referrer policy configured', headerValue('Referrer-Policy') === 'strict-origin-when-cross-origin'],
 ];
 
 const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
