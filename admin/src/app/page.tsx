@@ -312,10 +312,12 @@ export default function AdminPage() {
       setMfaSecret(null);
       setAuthStatus('mfa_required');
     } else {
-      setMfaFactorId('');
+      const pendingTotp = factors.totp.find((factor) => factor.status === 'unverified');
+      setMfaFactorId(pendingTotp?.id ?? '');
       setMfaQrCode(null);
       setMfaSecret(null);
       setAuthStatus('mfa_enroll');
+      if (pendingTotp) setAuthError('An incomplete authenticator setup already exists. Contact the project owner to reset the pending factor before retrying enrollment.');
     }
     return false;
   }, []);
@@ -444,7 +446,7 @@ export default function AdminPage() {
 
   const handleMfaVerify = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!mfaFactorId || !/^\\d{6}$/.test(mfaCode.trim())) {
+    if (!mfaFactorId || !/^\d{6}$/.test(mfaCode.trim())) {
       setAuthError('Enter the current six-digit code from your authenticator app.');
       return;
     }
@@ -538,7 +540,7 @@ export default function AdminPage() {
               <form onSubmit={handleMfaVerify} className="space-y-3">
                 <label className="block text-sm font-medium text-zinc-300">
                   Authenticator code
-                  <input required inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\\D/g, '').slice(0, 6))} className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-center text-lg tracking-[0.4em] text-white outline-none focus:border-emerald-500" />
+                  <input required inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-center text-lg tracking-[0.4em] text-white outline-none focus:border-emerald-500" />
                 </label>
                 <button disabled={isMfaBusy} type="submit" className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">
                   {isMfaBusy ? 'Verifying…' : 'Verify and continue'}
