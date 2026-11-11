@@ -29,6 +29,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["usesCleartextTraffic"] = "false"
     }
 
     signingConfigs {
@@ -41,7 +42,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Local Supabase emulator access is limited to non-release builds.
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
         release {
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
             // A release must use a private upload key; never silently ship a debug-signed APK.
             signingConfig = signingConfigs.getByName("release")
         }
