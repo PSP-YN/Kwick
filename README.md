@@ -4,6 +4,8 @@ NexHelp is a trust-first home-services marketplace connecting customers with loc
 
 ## System components
 
+- **Public preview:** [NexHelp landing page](https://nexhelp-landing-26e2uyisa-pspyn.vercel.app/) — preview deployment only, not a statement that the service is live.
+
 1. **Flutter mobile application (`lib/`):** Customer and service-provider experiences in one Android/iOS codebase.
 2. **Supabase and PostgreSQL (`supabase/`):** Authentication, RLS-protected data, transactional booking and assignment workflows, and private storage.
 3. **Operations console (`admin/`):** Protected Next.js dashboard for provider verification, manual dispatch, request tracking, and disputes.
