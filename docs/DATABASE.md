@@ -8,6 +8,12 @@ The NexHelp database is implemented in PostgreSQL and managed through versioned 
 - `20261023000002_rls_policies.sql`: Row-Level Security policies for Customer, Provider, Admin, and Public access.
 - `20261023000003_rpc_functions.sql`: Transactional `SECURITY DEFINER` functions enforcing order state transitions, provider assignment, and verification.
 - `20261023000004_seed_pilot_data.sql`: Seed data for Bengaluru pilot service area, plumbing/electrical categories, and private storage buckets.
+- `20261111000005_harden_admin_bootstrap.sql`: Restricts first-admin bootstrap execution to trusted database operators.
+- `20261111000006_auth_provisioning_and_write_privileges.sql`: Provisions profiles and allowlisted roles from Auth events and narrows direct table writes.
+- `20261111000007_dispatch_provider_invariants.sql`: Enforces one active offer/job per provider and matching service-area eligibility.
+- `20261111000008_ai_diagnosis_usage.sql`: Stores private per-user AI usage metadata without storing customer issue descriptions.
+- `20261111000009_harden_definer_helpers.sql`: Restricts cross-user helper lookups and SECURITY DEFINER execution grants.
+- `20261111000010_atomic_ai_quota.sql`: Atomically reserves per-user AI diagnosis slots under a transaction-scoped advisory lock; executable only by the server-side `service_role`.
 
 ---
 

@@ -6,9 +6,13 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: nexhelp-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   flutter-validation:
-    name: Flutter Lint & Tests
+    name: Flutter Lint, Tests & Android APK
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,6 +41,29 @@ jobs:
       - name: Run Tests
         run: flutter test --coverage
 
+      - name: Compile Android debug APK
+        run: flutter build apk --debug --dart-define=SUPABASE_URL=https://example.supabase.co --dart-define=SUPABASE_ANON_KEY=ci-placeholder
+
+      - name: Upload Android debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexhelp-android-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  landing-validation:
+    name: Public Landing Page Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate landing page structure, links and responsive features
+        run: node landing/validate.mjs
+
   admin-validation:
     name: Admin Next.js Build & Lint
     runs-on: ubuntu-latest
@@ -46,7 +73,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: admin/package-lock.json
 
@@ -70,8 +97,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Run Database Tests in Isolated Postgres
         run: |
           chmod +x supabase/tests/run_tests.sh
           ./supabase/tests/run_tests.sh
+
+  ai-edge-function-check:
+    name: AI Edge Function Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check diagnosis function
+        run: deno check supabase/functions/diagnose-service/index.ts
+      - name: Test AI identifier redaction
+        run: deno test supabase/functions/diagnose-service/redaction_test.ts

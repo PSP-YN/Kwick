@@ -25,7 +25,7 @@ export default function ProviderVerification({
 
   const filteredProviders = providers.filter((p) => {
     if (activeFilter === 'pending') {
-      return p.verification_status === 'submitted' || p.verification_status === 'under_review';
+      return p.verification_status === 'pending';
     }
     if (activeFilter === 'approved') {
       return p.verification_status === 'approved';
@@ -112,7 +112,7 @@ export default function ProviderVerification({
             Provider Identity & Credential Audits
           </h2>
           <p className="text-xs text-zinc-500">
-            Review Government Photo IDs (Aadhaar/PAN) and trade certifications before enabling on-field matching.
+            Review a permitted identity document and trade qualification before enabling on-field matching. Do not request full Aadhaar numbers or biometric data; use an alternative ID unless a UIDAI-compliant process has been separately approved.
           </p>
         </div>
 
@@ -280,7 +280,7 @@ export default function ProviderVerification({
                   rows={3}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. Government Aadhaar card verified against DigiLocker. Electrical license #KA-2024-BLR confirmed active."
+                  placeholder="e.g. Alternative government ID reviewed; electrical trade credential and validity checked."
                   className="w-full text-xs border border-zinc-300 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500"
                 />
               </div>

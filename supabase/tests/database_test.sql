@@ -11,12 +11,21 @@ CREATE SCHEMA IF NOT EXISTS auth;
 CREATE TABLE IF NOT EXISTS auth.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT,
+    phone TEXT,
+    raw_user_meta_data JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Mock auth.uid() function for session simulation
+-- Mock Supabase Auth helpers for session simulation outside the hosted platform.
 CREATE OR REPLACE FUNCTION auth.uid() RETURNS UUID AS $$
-    SELECT current_setting('request.jwt.claim.sub', true)::UUID;
+    SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::UUID;
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION auth.jwt() RETURNS JSONB AS $$
+    SELECT COALESCE(
+        NULLIF(current_setting('request.jwt.claims', true), ''),
+        '{}'
+    )::JSONB;
 $$ LANGUAGE sql STABLE;
 
 CREATE SCHEMA IF NOT EXISTS storage;
@@ -35,9 +44,17 @@ CREATE TABLE IF NOT EXISTS storage.objects (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE OR REPLACE FUNCTION storage.foldername(name TEXT) RETURNS TEXT[] AS $$
+CREATE OR REPLACE FUNCTION storage.foldername(name TEXT) RETURNS TEXT[] AS $folder$
     SELECT string_to_array(name, '/');
-$$ LANGUAGE sql IMMUTABLE;
+$folder$ LANGUAGE sql IMMUTABLE;
+
+DO $roles$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+        CREATE ROLE service_role NOLOGIN BYPASSRLS;
+    END IF;
+END;
+$roles$;
 
 COMMIT;
 
@@ -46,6 +63,15 @@ COMMIT;
 \i supabase/migrations/20261023000002_rls_policies.sql
 \i supabase/migrations/20261023000003_rpc_functions.sql
 \i supabase/migrations/20261023000004_seed_pilot_data.sql
+\i supabase/migrations/20261111000005_harden_admin_bootstrap.sql
+\i supabase/migrations/20261111000006_auth_provisioning_and_write_privileges.sql
+\i supabase/migrations/20261111000007_dispatch_provider_invariants.sql
+\i supabase/migrations/20261111000008_ai_diagnosis_usage.sql
+\i supabase/migrations/20261111000009_harden_definer_helpers.sql
+\i supabase/migrations/20261111000010_atomic_ai_quota.sql
+\i supabase/migrations/20261111000011_validate_booking_inputs.sql
+\i supabase/migrations/20261111000012_ai_consent_audit.sql
+\i supabase/migrations/20261111000013_require_admin_mfa.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
@@ -66,6 +92,7 @@ DECLARE
     v_unrelated_prov_pk UUID;
     v_request_id UUID;
     v_assignment_id UUID;
+    v_second_request_id UUID;
     v_failed BOOLEAN;
 BEGIN
     RAISE NOTICE '>>> Starting NexHelp Automated Test Suite <<<';
@@ -83,32 +110,28 @@ BEGIN
     -- ------------------------------------------------------------------------
     -- Setup Test Users
     -- ------------------------------------------------------------------------
-    INSERT INTO auth.users (id, email) VALUES
-        (v_admin_id, 'admin@nexhelp.com'),
-        (v_customer_a_id, 'customer.a@test.com'),
-        (v_customer_b_id, 'customer.b@test.com'),
-        (v_provider_user_id, 'plumber.rajesh@test.com'),
-        (v_unrelated_provider_id, 'electrician.suresh@test.com');
+    INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES
+        (v_admin_id, 'admin@nexhelp.com', jsonb_build_object('full_name', 'Platform Admin', 'initial_role', 'customer')),
+        (v_customer_a_id, 'customer.a@test.com', jsonb_build_object('full_name', 'Customer Alice', 'initial_role', 'customer')),
+        (v_customer_b_id, 'customer.b@test.com', jsonb_build_object('full_name', 'Customer Bob', 'initial_role', 'customer')),
+        (v_provider_user_id, 'plumber.rajesh@test.com', jsonb_build_object('full_name', 'Rajesh Kumar', 'initial_role', 'provider')),
+        (v_unrelated_provider_id, 'electrician.suresh@test.com', jsonb_build_object('full_name', 'Suresh Gowda', 'initial_role', 'provider'));
 
-    -- Admin Bootstrap
+    -- Admin Bootstrap and MFA assurance gate.
+    PERFORM set_config('request.jwt.claim.sub', v_admin_id::text, true);
+    PERFORM set_config('request.jwt.claims', pg_catalog.jsonb_build_object('sub', v_admin_id::text, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+    ASSERT public.is_admin() = false, 'Test 2 Failed: Admin access was granted to an AAL1 session';
+    PERFORM set_config('request.jwt.claims', pg_catalog.jsonb_build_object('sub', v_admin_id::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
     PERFORM public.bootstrap_admin(v_admin_id);
+    ASSERT public.is_admin() = true, 'Test 2 Failed: Admin access was denied to an AAL2 session';
     ASSERT public.has_role(v_admin_id, 'admin') = true, 'Test 2 Failed: Admin role missing';
     ASSERT public.has_role(v_admin_id, 'super_admin') = true, 'Test 2 Failed: Super Admin role missing';
 
-    -- Profiles
-    INSERT INTO public.profiles (id, full_name, phone, email) VALUES
-        (v_admin_id, 'Platform Admin', '9876543210', 'admin@nexhelp.com'),
-        (v_customer_a_id, 'Customer Alice', '9876543211', 'customer.a@test.com'),
-        (v_customer_b_id, 'Customer Bob', '9876543212', 'customer.b@test.com'),
-        (v_provider_user_id, 'Rajesh Kumar', '9876543213', 'plumber.rajesh@test.com'),
-        (v_unrelated_provider_id, 'Suresh Gowda', '9876543214', 'electrician.suresh@test.com');
-
-    -- Roles
-    INSERT INTO public.user_roles (user_id, role) VALUES
-        (v_customer_a_id, 'customer'),
-        (v_customer_b_id, 'customer'),
-        (v_provider_user_id, 'provider'),
-        (v_unrelated_provider_id, 'provider');
+    -- Auth trigger must provision profile and allowlisted initial role.
+    ASSERT EXISTS (SELECT 1 FROM public.profiles WHERE id = v_customer_a_id AND full_name = 'Customer Alice'),
+        'Test 2 Failed: Auth trigger did not provision customer profile';
+    ASSERT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = v_provider_user_id AND role = 'provider'),
+        'Test 2 Failed: Auth trigger did not provision provider role';
     RAISE NOTICE '[PASS] Test 2: User profiles, authentication and RBAC roles created';
 
     -- ------------------------------------------------------------------------
@@ -128,6 +151,70 @@ BEGIN
     ASSERT (SELECT status FROM public.service_requests WHERE id = v_request_id) = 'requested', 'Test 3 Failed: Status must be requested';
     ASSERT (SELECT count(*) FROM public.order_events WHERE request_id = v_request_id AND event_type = 'request_created') = 1, 'Test 3 Failed: Order event not created';
     RAISE NOTICE '[PASS] Test 3: Customer service request created with audit trail';
+
+    -- Test 3b: Reject a pincode outside the selected service area.
+    v_failed := false;
+    BEGIN
+        PERFORM public.create_service_request(
+            p_category_id := v_cat_plumbing,
+            p_service_area_id := v_pilot_area,
+            p_description := 'Kitchen sink tap is leaking continuously',
+            p_address_line := 'Test address, Bengaluru',
+            p_pincode := '560034'
+        );
+    EXCEPTION WHEN SQLSTATE 'P0009' THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed, 'Test 3b Failed: Request accepted outside the selected service-area pincode';
+
+    -- Test 3c: Coordinates must be supplied as a complete latitude/longitude pair.
+    v_failed := false;
+    BEGIN
+        PERFORM public.create_service_request(
+            p_category_id := v_cat_plumbing,
+            p_service_area_id := v_pilot_area,
+            p_description := 'Kitchen sink tap is leaking continuously',
+            p_address_line := 'Test address, Bengaluru',
+            p_pincode := '560102',
+            p_latitude := 12.91
+        );
+    EXCEPTION WHEN SQLSTATE 'P0010' THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed, 'Test 3c Failed: Request accepted with only one coordinate';
+
+    -- Test 3d: Past appointments must be rejected by the database, not only the UI.
+    v_failed := false;
+    BEGIN
+        PERFORM public.create_service_request(
+            p_category_id := v_cat_plumbing,
+            p_service_area_id := v_pilot_area,
+            p_description := 'Kitchen sink tap is leaking continuously',
+            p_address_line := 'Test address, Bengaluru',
+            p_pincode := '560102',
+            p_scheduled_at := now() - interval '1 minute'
+        );
+    EXCEPTION WHEN SQLSTATE 'P0011' THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed, 'Test 3d Failed: Request accepted with a past appointment time';
+
+    -- Test 3e: A customer cannot attach another account's storage object to a request.
+    v_failed := false;
+    BEGIN
+        PERFORM public.create_service_request(
+            p_category_id := v_cat_plumbing,
+            p_service_area_id := v_pilot_area,
+            p_description := 'Kitchen sink tap is leaking continuously',
+            p_address_line := 'Test address, Bengaluru',
+            p_pincode := '560102',
+            p_photo_storage_path := v_customer_b_id::text || '/private-photo.jpg'
+        );
+    EXCEPTION WHEN SQLSTATE 'P0013' THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed, 'Test 3e Failed: Request accepted a photo outside the current customer folder';
+    RAISE NOTICE '[PASS] Test 3b-3e: Service-area, coordinate, schedule, and photo ownership validation';
 
     -- ------------------------------------------------------------------------
     -- Test 4: Provider Onboarding & Unapproved Assignment Prevention
@@ -164,6 +251,25 @@ BEGIN
     ASSERT (SELECT status FROM public.assignments WHERE id = v_assignment_id) = 'offered', 'Test 5 Failed: Assignment status not offered';
     RAISE NOTICE '[PASS] Test 5: Provider approved and assigned successfully';
 
+    -- Test 5b: A provider cannot receive a second active offer for another request.
+    PERFORM set_config('request.jwt.claim.sub', v_customer_a_id::text, true);
+    v_second_request_id := public.create_service_request(
+        p_category_id := v_cat_plumbing,
+        p_service_area_id := v_pilot_area,
+        p_description := 'Bathroom tap is dripping and needs inspection',
+        p_address_line := '#142, 5th Cross, 19th Main, HSR Layout Sector 1',
+        p_pincode := '560102'
+    );
+    PERFORM set_config('request.jwt.claim.sub', v_admin_id::text, true);
+    v_failed := false;
+    BEGIN
+        PERFORM public.assign_provider_to_request(v_second_request_id, v_provider_id, 32000);
+    EXCEPTION WHEN unique_violation THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed = true, 'Test 5b Failed: Provider received multiple active offers';
+    RAISE NOTICE '[PASS] Test 5b: One active assignment per provider enforced';
+
     -- ------------------------------------------------------------------------
     -- Test 6: Invariant Test — Duplicate Active Assignment Prevented
     -- ------------------------------------------------------------------------
@@ -194,7 +300,18 @@ BEGIN
     ASSERT (SELECT status FROM public.assignments WHERE id = v_assignment_id) = 'accepted', 'Test 7 Failed: Assignment not accepted';
     ASSERT (SELECT status FROM public.service_requests WHERE id = v_request_id) = 'accepted', 'Test 7 Failed: Request not accepted';
     ASSERT (SELECT availability_status FROM public.providers WHERE id = v_provider_id) = 'busy', 'Test 7 Failed: Provider not busy';
-    RAISE NOTICE '[PASS] Test 7: Provider accept transition and busy availability verified';
+
+    PERFORM set_config('request.jwt.claim.sub', v_admin_id::text, true);
+    v_failed := false;
+    BEGIN
+        PERFORM public.assign_provider_to_request(v_second_request_id, v_provider_id, 32000);
+    EXCEPTION WHEN SQLSTATE 'P0006' THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed = true, 'Test 7 Failed: Busy provider was assigned another request';
+    RAISE NOTICE '[PASS] Test 7: Provider accept transition and busy dispatch guard verified';
+
+    PERFORM set_config('request.jwt.claim.sub', v_provider_user_id::text, true);
 
     -- ------------------------------------------------------------------------
     -- Test 8: Job Progression Lifecycle to Completion
@@ -240,19 +357,25 @@ SET ROLE authenticated;
 SET request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
 DO $$
 BEGIN
-    ASSERT (SELECT count(*) FROM public.service_requests WHERE customer_id = '22222222-2222-2222-2222-222222222222') = 1,
+    ASSERT (SELECT count(*) FROM public.service_requests WHERE customer_id = '22222222-2222-2222-2222-222222222222') >= 1,
         'Test 10 Failed: Customer A cannot see their own request';
 END;
 $$;
 
 -- Customer B tries to view Customer A's request (Must return 0 rows)
 SET request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
-DO $$
+DO $customer_b$
 BEGIN
     ASSERT (SELECT count(*) FROM public.service_requests) = 0,
         'Test 10 Failed: Customer B can see Customer A request under RLS';
+    ASSERT (SELECT count(*) FROM public.get_customer_request_ids('22222222-2222-2222-2222-222222222222')) = 0,
+        'Test 10 Failed: Customer B can retrieve Customer A request IDs through helper RPC';
+    ASSERT (SELECT count(*) FROM public.get_assigned_provider_ids_for_customer('22222222-2222-2222-2222-222222222222')) = 0,
+        'Test 10 Failed: Customer B can retrieve Customer A provider IDs through helper RPC';
+    ASSERT (SELECT count(*) FROM public.get_assigned_request_ids_for_provider('33333333-3333-3333-3333-333333333333')) = 0,
+        'Test 10 Failed: Customer B can retrieve another provider assignment IDs';
 END;
-$$;
+$customer_b$;
 
 -- Unassigned Provider tries to view Customer A's request (Must return 0 rows)
 SET request.jwt.claim.sub = '55555555-5555-5555-5555-555555555555';
@@ -268,8 +391,81 @@ RESET ROLE;
 DO $$
 BEGIN
     RAISE NOTICE '[PASS] Test 10: Row-Level Security isolation strictly enforced for authenticated users';
-    RAISE NOTICE '>>> ALL 10 DATABASE & SECURITY TESTS PASSED SUCCESSFULLY! <<<';
+    RAISE NOTICE '[PASS] Test 10: RLS isolation verified; remaining security assertions execute below.';
 END;
 $$;
+
+-- Test 11: First-admin bootstrap is not executable by untrusted API roles.
+DO $audit$
+DECLARE
+    v_i INTEGER;
+    v_reserved BOOLEAN;
+BEGIN
+    ASSERT NOT has_function_privilege('anon', 'public.bootstrap_admin(uuid)', 'EXECUTE'),
+        'Test 11 Failed: anon can execute bootstrap_admin';
+    ASSERT NOT has_function_privilege('authenticated', 'public.bootstrap_admin(uuid)', 'EXECUTE'),
+        'Test 11 Failed: authenticated can execute bootstrap_admin';
+    RAISE NOTICE '[PASS] Test 11: bootstrap_admin execution restricted to trusted database operators';
+    ASSERT has_column_privilege('authenticated', 'public.providers', 'availability_status', 'UPDATE'),
+        'Test 12 Failed: provider availability update privilege missing';
+    ASSERT NOT has_column_privilege('authenticated', 'public.providers', 'verification_status', 'UPDATE'),
+        'Test 12 Failed: providers can directly update verification status';
+    ASSERT NOT has_table_privilege('authenticated', 'public.service_requests', 'UPDATE'),
+        'Test 12 Failed: authenticated users can directly update service requests';
+    ASSERT NOT has_table_privilege('authenticated', 'public.assignments', 'UPDATE'),
+        'Test 12 Failed: authenticated users can directly update assignments';
+    ASSERT NOT has_table_privilege('authenticated', 'public.order_events', 'INSERT'),
+        'Test 12 Failed: authenticated users can forge order events';
+    RAISE NOTICE '[PASS] Test 12: direct write privileges restricted to intended operations';
+    ASSERT NOT has_table_privilege('authenticated', 'public.ai_diagnosis_usage', 'SELECT'),
+        'Test 13 Failed: authenticated users can read AI usage audit records';
+    ASSERT NOT has_table_privilege('authenticated', 'public.ai_diagnosis_usage', 'INSERT'),
+        'Test 13 Failed: authenticated users can forge AI usage records';
+    RAISE NOTICE '[PASS] Test 13: AI usage audit records are private to trusted server operations';
+    ASSERT NOT has_function_privilege('anon', 'public.has_role(uuid,text)', 'EXECUTE'),
+        'Test 14 Failed: anon can inspect role helper';
+    ASSERT has_function_privilege('authenticated', 'public.get_provider_id_for_user(uuid)', 'EXECUTE'),
+        'Test 14 Failed: provider RLS lookup helper is not executable';
+    ASSERT has_function_privilege('authenticated', 'public.has_role(uuid,text)', 'EXECUTE'),
+        'Test 14 Failed: scoped role helper is not executable';
+    ASSERT NOT has_function_privilege('anon', 'public.get_provider_id_for_user(uuid)', 'EXECUTE'),
+        'Test 14 Failed: anon can invoke provider lookup helper';
+    ASSERT has_function_privilege('authenticated', 'public.get_customer_request_ids(uuid)', 'EXECUTE'),
+        'Test 14 Failed: RLS customer request helper unavailable';
+    ASSERT has_function_privilege('authenticated', 'public.create_service_request(uuid,uuid,text,text,text,double precision,double precision,timestamp with time zone,text,text)', 'EXECUTE'),
+        'Test 14 Failed: authenticated customer cannot create requests';
+    ASSERT NOT has_function_privilege('anon', 'public.create_service_request(uuid,uuid,text,text,text,double precision,double precision,timestamp with time zone,text,text)', 'EXECUTE'),
+        'Test 14 Failed: anon can create service requests';
+    RAISE NOTICE '[PASS] Test 14: SECURITY DEFINER helpers and RPC grants are restricted';
+    ASSERT has_function_privilege('service_role', 'public.reserve_ai_diagnosis_slot(uuid,text,integer)', 'EXECUTE'),
+        'Test 15 Failed: service_role cannot reserve AI quota';
+    ASSERT NOT has_function_privilege('authenticated', 'public.reserve_ai_diagnosis_slot(uuid,text,integer)', 'EXECUTE'),
+        'Test 15 Failed: authenticated clients can reserve AI quota directly';
+    ASSERT NOT has_function_privilege('anon', 'public.reserve_ai_diagnosis_slot(uuid,text,integer)', 'EXECUTE'),
+        'Test 15 Failed: anon can reserve AI quota';
+    FOR v_i IN 1..5 LOOP
+        SELECT public.reserve_ai_diagnosis_slot(
+            '22222222-2222-2222-2222-222222222222',
+            'gemini-3.8-flash',
+            5
+        ) INTO v_reserved;
+        ASSERT v_reserved, 'Test 15 Failed: valid AI quota slot was rejected';
+    END LOOP;
+    SELECT public.reserve_ai_diagnosis_slot(
+        '22222222-2222-2222-2222-222222222222',
+        'gemini-3.8-flash',
+        5
+    ) INTO v_reserved;
+    ASSERT NOT v_reserved, 'Test 15 Failed: AI quota allowed a sixth reservation';
+    ASSERT (SELECT count(*) FROM public.ai_diagnosis_usage
+            WHERE user_id = '22222222-2222-2222-2222-222222222222') = 5,
+        'Test 15 Failed: AI usage log count does not match successful reservations';
+    ASSERT (SELECT count(*) FROM public.ai_diagnosis_usage
+            WHERE user_id = '22222222-2222-2222-2222-222222222222'
+              AND consent_version = '2026-11-11-v1') = 5,
+        'Test 15 Failed: AI usage records do not retain the accepted consent version';
+    RAISE NOTICE '[PASS] Test 15: AI quota reservation is atomic and server-role-only';
+END;
+$audit$;
 
 ROLLBACK;

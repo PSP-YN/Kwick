@@ -68,7 +68,7 @@ class Validators {
     }
     // Pilot region warning/check
     if (cleaned != AppConfig.pilotPincode) {
-      return 'NexHelp pilot is currently operating in ${AppConfig.pilotPincode} (Bengaluru South).';
+      return 'NexHelp currently serves pincode ${AppConfig.pilotPincode} (HSR Layout focus).';
     }
     return null;
   }
@@ -93,6 +93,9 @@ class Validators {
     }
     if (value.trim().length < AppConfig.minAddressLength) {
       return 'Address must be at least ${AppConfig.minAddressLength} characters.';
+    }
+    if (value.trim().length > AppConfig.maxAddressLength) {
+      return 'Address cannot exceed ${AppConfig.maxAddressLength} characters.';
     }
     return null;
   }

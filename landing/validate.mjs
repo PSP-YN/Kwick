@@ -1,0 +1,56 @@
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const directory = fileURLToPath(new URL('.', import.meta.url));
+const html = readFileSync(resolve(directory, 'index.html'), 'utf8');
+const css = readFileSync(resolve(directory, 'styles.css'), 'utf8');
+const js = readFileSync(resolve(directory, 'app.js'), 'utf8');
+const vercel = JSON.parse(readFileSync(resolve(directory, 'vercel.json'), 'utf8'));
+const headers = vercel.headers?.[0]?.headers ?? [];
+const headerValue = (name) => headers.find((header) => header.key.toLowerCase() === name.toLowerCase())?.value ?? '';
+
+const checks = [
+  ['document language', /<html lang="en">/.test(html)],
+  ['responsive viewport', /name="viewport"[^>]+width=device-width/.test(html)],
+  ['description metadata', /name="description"/.test(html)],
+  ['Open Graph metadata', /property="og:title"/.test(html) && /property="og:description"/.test(html)],
+  ['canonical URL', /rel="canonical" href="https:\/\/nexhelp-landing\.vercel\.app\//.test(html)],
+  ['Twitter card metadata', /name="twitter:card"/.test(html) && /name="twitter:title"/.test(html)],
+  ['main landmark', /<main id="main">/.test(html)],
+  ['skip navigation link', /class="skip-link" href="#main"/.test(html)],
+  ['how it works section', /id="how-it-works"/.test(html)],
+  ['trust and safety section', /id="trust"/.test(html)],
+  ['professional workflow section', /id="for-professionals"/.test(html)],
+  ['mobile navigation behavior', /aria-expanded/.test(js) && /is-open/.test(js)],
+  ['mobile responsive breakpoint', /@media \(max-width: 640px\)/.test(css)],
+  ['tablet responsive breakpoint', /@media \(max-width: 900px\)/.test(css)],
+  ['reduced motion support', /prefers-reduced-motion: reduce/.test(css)],
+  ['local stylesheet exists', existsSync(resolve(directory, 'styles.css'))],
+  ['local script exists', existsSync(resolve(directory, 'app.js'))],
+  ['favicon exists', existsSync(resolve(directory, 'favicon.svg'))],
+  ['crawler policy exists', existsSync(resolve(directory, 'robots.txt'))],
+  ['sitemap exists', existsSync(resolve(directory, 'sitemap.xml'))],
+  ['Content Security Policy configured', headerValue('Content-Security-Policy').includes("default-src 'self'")],
+  ['anti-sniffing header configured', headerValue('X-Content-Type-Options') === 'nosniff'],
+  ['referrer policy configured', headerValue('Referrer-Policy') === 'strict-origin-when-cross-origin'],
+];
+
+const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
+for (const match of html.matchAll(/href="#([^"]+)"/g)) {
+  checks.push(['anchor target #' + match[1] + ' exists', ids.has(match[1])]);
+}
+for (const match of html.matchAll(/<a\b([^>]*)>/g)) {
+  const attrs = match[1];
+  if (/target="_blank"/.test(attrs)) {
+    checks.push(['external new-tab link is protected', /rel="[^"]*noreferrer/.test(attrs)]);
+  }
+}
+
+let failed = false;
+for (const [name, passed] of checks) {
+  process.stdout.write((passed ? 'PASS' : 'FAIL') + '  ' + name + '\n');
+  if (!passed) failed = true;
+}
+if (failed) process.exit(1);
+process.stdout.write('\nValidated ' + checks.length + ' landing-page checks.\n');

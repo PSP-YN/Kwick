@@ -1,13 +1,15 @@
 'use client';
 
 import React from 'react';
-import { ShieldCheck, MapPin, Wrench, RefreshCw } from 'lucide-react';
+import { ShieldCheck, MapPin, Wrench, RefreshCw, LogOut } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'overview' | 'dispatch' | 'providers' | 'disputes';
   setActiveTab: (tab: 'overview' | 'dispatch' | 'providers' | 'disputes') => void;
   onRefresh: () => void;
   isRefreshing: boolean;
+  userEmail: string;
+  onSignOut: () => void;
 }
 
 export default function Header({
@@ -15,6 +17,8 @@ export default function Header({
   setActiveTab,
   onRefresh,
   isRefreshing,
+  userEmail,
+  onSignOut,
 }: HeaderProps) {
   return (
     <header className="border-b border-zinc-200 bg-white sticky top-0 z-30 shadow-xs">
@@ -63,13 +67,16 @@ export default function Header({
                 AD
               </div>
               <div className="hidden sm:block text-left">
-                <p className="text-xs font-semibold text-zinc-900">Lead Dispatcher</p>
+                <p className="max-w-[180px] truncate text-xs font-semibold text-zinc-900">{userEmail}</p>
                 <div className="flex items-center space-x-1">
                   <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                  <span className="text-[10px] text-zinc-500 font-mono">admin_role</span>
+                  <span className="text-[10px] text-zinc-500 font-mono">Verified admin session</span>
                 </div>
               </div>
             </div>
+            <button onClick={onSignOut} className="inline-flex items-center gap-1.5 rounded-md border border-zinc-300 px-2.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50" title="Sign out">
+              <LogOut className="h-3.5 w-3.5" /><span className="hidden sm:inline">Sign out</span>
+            </button>
           </div>
         </div>
 

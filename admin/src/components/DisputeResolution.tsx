@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { AlertTriangle, CheckCircle2, MessageSquare, AlertCircle } from 'lucide-react';
-import { SupportTicket, ServiceRequest } from '../types';
+import { SupportTicket, ServiceRequest, OrderStatus } from '../types';
 import { overrideRequestStatusRpc } from '../lib/supabase';
 
 interface DisputeResolutionProps {
@@ -17,7 +17,7 @@ export default function DisputeResolution({
   onActionComplete,
 }: DisputeResolutionProps) {
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
-  const [targetStatus, setTargetStatus] = useState<string>('cancelled');
+  const [targetStatus, setTargetStatus] = useState<OrderStatus>('cancelled');
   const [overrideReason, setOverrideReason] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(
@@ -120,14 +120,14 @@ export default function DisputeResolution({
                     </p>
                   )}
                   <p className="text-[10px] text-zinc-400">
-                    Linked Request: <span className="font-mono text-zinc-600">{tkt.service_request_id}</span>
+                    Linked Request: <span className="font-mono text-zinc-600">{tkt.service_request_id || 'Not linked'}</span>
                   </p>
                 </div>
 
                 <div className="flex items-center space-x-2 shrink-0">
                   <button
                     onClick={() => {
-                      const req = requests.find((r) => r.id === tkt.service_request_id);
+                      const req = tkt.service_request_id ? requests.find((r) => r.id === tkt.service_request_id) : undefined;
                       if (req) {
                         setSelectedRequest(req);
                         setTargetStatus('disputed');
@@ -135,7 +135,7 @@ export default function DisputeResolution({
                       } else {
                         setFeedback({
                           type: 'error',
-                          message: `Request ${tkt.service_request_id} not found in active list.`,
+                          message: tkt.service_request_id ? `Request ${tkt.service_request_id} not found in the loaded request list.` : 'This support ticket is not linked to a service request.',
                         });
                       }
                     }}
@@ -233,14 +233,15 @@ export default function DisputeResolution({
                 </label>
                 <select
                   value={targetStatus}
-                  onChange={(e) => setTargetStatus(e.target.value)}
+                  onChange={(e) => setTargetStatus(e.target.value as OrderStatus)}
                   className="w-full text-xs border border-zinc-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500"
                 >
-                  <option value="draft">draft</option>
-                  <option value="submitted">submitted</option>
-                  <option value="matched">matched</option>
+                  <option value="requested">requested</option>
+                  <option value="reviewing">reviewing</option>
                   <option value="assigned">assigned</option>
-                  <option value="in_progress">in_progress</option>
+                  <option value="accepted">accepted</option>
+                  <option value="travelling">travelling</option>
+                  <option value="in_progress">in progress</option>
                   <option value="completed">completed</option>
                   <option value="cancelled">cancelled</option>
                   <option value="disputed">disputed</option>

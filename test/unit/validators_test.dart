@@ -37,7 +37,7 @@ void main() {
       expect(Validators.validatePincode('123'), isNotNull);
       expect(
         Validators.validatePincode('110001'),
-        contains('NexHelp pilot is currently operating'),
+        equals('NexHelp currently serves pincode 560102 (HSR Layout focus).'),
       );
       expect(Validators.validatePincode(AppConfig.pilotPincode), isNull);
     });

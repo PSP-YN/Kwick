@@ -12,7 +12,7 @@ export default function MetricCards({ metrics }: MetricCardsProps) {
   const cards = [
     {
       title: 'Requests Awaiting Dispatch',
-      value: metrics.pending_requests + metrics.matched_requests,
+      value: metrics.pending_requests,
       subtext: 'Pilot Pincode 560102',
       icon: Clock,
       color: 'text-amber-600',
@@ -22,16 +22,16 @@ export default function MetricCards({ metrics }: MetricCardsProps) {
     {
       title: 'Active Jobs In Progress',
       value: metrics.active_jobs,
-      subtext: 'Assigned or currently underway',
+      subtext: 'Accepted, travelling or in progress',
       icon: Activity,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200',
     },
     {
-      title: 'Verified Partners On-Field',
+      title: 'Verified Providers',
       value: metrics.verified_providers,
-      subtext: `${metrics.pending_verifications} awaiting document audit`,
+      subtext: `${metrics.pending_verifications} awaiting verification review`,
       icon: UserCheck,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
@@ -40,7 +40,7 @@ export default function MetricCards({ metrics }: MetricCardsProps) {
     {
       title: 'Jobs Completed Today',
       value: metrics.completed_today,
-      subtext: '100% verified pilot delivery',
+      subtext: 'Completion timestamps recorded today',
       icon: CheckCircle2,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50',

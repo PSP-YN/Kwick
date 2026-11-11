@@ -13,7 +13,7 @@ docker run --rm -d \
     -v "$(pwd):/workspace" \
     -w /workspace \
     -p "$PORT:5432" \
-    postgres:16-alpine > /dev/null
+    postgres:17-alpine > /dev/null
 
 cleanup() {
     echo "==> Stopping test container..."

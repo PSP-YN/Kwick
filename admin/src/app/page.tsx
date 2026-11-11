@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Header from '../components/Header';
 import MetricCards from '../components/MetricCards';
 import DispatchQueue from '../components/DispatchQueue';
@@ -19,12 +19,12 @@ import {
   fetchSupportTickets,
 } from '../lib/supabase';
 import { MapPin, ShieldCheck, TrendingUp, Clock } from 'lucide-react';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
-export default function AdminPage() {
+function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut: () => void }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'dispatch' | 'providers' | 'disputes'>('overview');
   const [metrics, setMetrics] = useState<AdminMetrics>({
     pending_requests: 0,
-    matched_requests: 0,
     active_jobs: 0,
     completed_today: 0,
     verified_providers: 0,
@@ -35,9 +35,11 @@ export default function AdminPage() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = async () => {
     setIsRefreshing(true);
+    setLoadError(null);
     try {
       const [m, r, p, t] = await Promise.all([
         fetchAdminMetrics(),
@@ -50,6 +52,8 @@ export default function AdminPage() {
       setProviders(p);
       setTickets(t);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to load operational data.';
+      setLoadError(message);
       console.error('Failed to load operational admin data:', err);
     } finally {
       setLoading(false);
@@ -76,7 +80,10 @@ export default function AdminPage() {
         }
       } catch (err) {
         console.error('Initial admin data load error:', err);
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoadError(err instanceof Error ? err.message : 'Unable to load operational data.');
+          setLoading(false);
+        }
       }
     };
     init();
@@ -92,6 +99,8 @@ export default function AdminPage() {
         setActiveTab={setActiveTab}
         onRefresh={loadData}
         isRefreshing={isRefreshing}
+        userEmail={userEmail}
+        onSignOut={onSignOut}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -102,6 +111,12 @@ export default function AdminPage() {
           </div>
         ) : (
           <>
+            {loadError && (
+              <div role="alert" className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                Live database data could not be loaded: {loadError}
+              </div>
+            )}
+
             {/* Top KPI Cards */}
             <MetricCards metrics={metrics} />
 
@@ -113,10 +128,10 @@ export default function AdminPage() {
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
                       <MapPin className="w-5 h-5 text-emerald-300" />
-                      <h2 className="text-lg font-bold">Bengaluru South Pilot Region (560102)</h2>
+                      <h2 className="text-lg font-bold">560102 Service Zone (HSR Layout Focus)</h2>
                     </div>
                     <p className="text-xs text-emerald-100 max-w-xl">
-                      Authoritative single-zone pilot for HSR Layout and Koramangala. Strict partial unique indexes prevent double-booking. Financial amounts recorded in integer paise.
+                      Single-pincode pilot zone. Koramangala remains out of scope until its service area and provider coverage are configured. Database constraints prevent overlapping active assignments. Financial amounts are stored in integer paise.
                     </p>
                   </div>
                   <div className="flex items-center space-x-3 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-xs">
@@ -172,7 +187,7 @@ export default function AdminPage() {
                               {req.status.replace('_', ' ')}
                             </span>
                             <p className="text-[11px] font-medium text-zinc-800 mt-0.5">
-                              ₹{(req.estimated_price_paise / 100).toLocaleString('en-IN')}
+                              {req.estimated_price_paise === null ? 'Not quoted' : `₹${(req.estimated_price_paise / 100).toLocaleString('en-IN')}`}
                             </p>
                           </div>
                         </div>
@@ -260,9 +275,302 @@ export default function AdminPage() {
       {/* Footer */}
       <footer className="border-t border-zinc-200 bg-white py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center text-xs text-zinc-500">
-          NexHelp Operations Platform • Bengaluru South Pilot • PostgreSQL 16 + RLS • Built for Production
+          NexHelp Operations Platform • 560102 Pilot Zone • PostgreSQL 17 + RLS • Pre-launch
         </div>
       </footer>
     </div>
+  );
+}
+
+
+type AuthStatus = 'checking' | 'signed_out' | 'authorized' | 'denied' | 'configuration_error' | 'mfa_required' | 'mfa_enroll';
+
+export default function AdminPage() {
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(isSupabaseConfigured ? 'checking' : 'configuration_error');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [authError, setAuthError] = useState<string | null>(isSupabaseConfigured ? null : 'Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to connect the operations console.');
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState('');
+  const [mfaQrCode, setMfaQrCode] = useState<string | null>(null);
+  const [mfaSecret, setMfaSecret] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [isMfaBusy, setIsMfaBusy] = useState(false);
+
+  const requireAdminMfa = useCallback(async (): Promise<boolean> => {
+    const { data: assurance, error: assuranceError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (assuranceError) throw assuranceError;
+    if (assurance.currentLevel === 'aal2') return true;
+
+    const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+    if (factorsError) throw factorsError;
+    const verifiedTotp = factors.totp.find((factor) => factor.status === 'verified');
+    if (verifiedTotp) {
+      setMfaFactorId(verifiedTotp.id);
+      setMfaQrCode(null);
+      setMfaSecret(null);
+      setAuthStatus('mfa_required');
+    } else {
+      const allFactors = factors.all as Array<{ id: string; factor_type: string; status: string }>;
+      const pendingTotp = allFactors.find(
+        (factor) => factor.factor_type === 'totp' && factor.status === 'unverified',
+      );
+      setMfaFactorId(pendingTotp?.id ?? '');
+      setMfaQrCode(null);
+      setMfaSecret(null);
+      setAuthStatus('mfa_enroll');
+      if (pendingTotp) setAuthError('An incomplete authenticator setup already exists. Contact the project owner to reset the pending factor before retrying enrollment.');
+    }
+    return false;
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const verifySession = async (session: import('@supabase/supabase-js').Session | null) => {
+      if (!active) return;
+      if (!session) {
+        setAuthStatus('signed_out');
+        setUserEmail('');
+        return;
+      }
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id);
+      if (!active) return;
+      if (error) {
+        setAuthError(error.message);
+        setAuthStatus('denied');
+        return;
+      }
+      const allowed = data?.some((entry) => entry.role === 'admin' || entry.role === 'super_admin');
+      if (!allowed) {
+        setAuthError('This account does not have NexHelp administrator privileges.');
+        setAuthStatus('denied');
+        return;
+      }
+      setUserEmail(session.user.email || session.user.phone || 'Authorized administrator');
+      try {
+        const mfaSatisfied = await requireAdminMfa();
+        if (!active) return;
+        setAuthError(mfaSatisfied ? null : 'Administrator access requires a verified authenticator app code.');
+        if (mfaSatisfied) setAuthStatus('authorized');
+      } catch (mfaError) {
+        if (!active) return;
+        setAuthError(mfaError instanceof Error ? mfaError.message : 'Unable to verify administrator MFA.');
+        setAuthStatus('denied');
+      }
+    };
+
+    if (!isSupabaseConfigured) {
+      return () => { active = false; };
+    }
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        if (active) {
+          setAuthError(error.message);
+          setAuthStatus('signed_out');
+        }
+        return;
+      }
+      void verifySession(data.session);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      void verifySession(session);
+    });
+    return () => {
+      active = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, [requireAdminMfa]);
+
+  const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSigningIn(true);
+    setAuthError(null);
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    setIsSigningIn(false);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    if (!data.session) {
+      setAuthError('Authentication succeeded without an active session. Please retry.');
+      return;
+    }
+    const { data: roles, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', data.session.user.id);
+    if (roleError) {
+      setAuthError(roleError.message);
+      return;
+    }
+    if (!roles?.some((entry) => entry.role === 'admin' || entry.role === 'super_admin')) {
+      await supabase.auth.signOut();
+      setAuthError('This account does not have NexHelp administrator privileges.');
+      setAuthStatus('signed_out');
+      return;
+    }
+    setUserEmail(data.session.user.email || data.session.user.phone || 'Authorized administrator');
+    try {
+      const mfaSatisfied = await requireAdminMfa();
+      setAuthError(mfaSatisfied ? null : 'Administrator access requires a verified authenticator app code.');
+      if (mfaSatisfied) setAuthStatus('authorized');
+    } catch (mfaError) {
+      setAuthError(mfaError instanceof Error ? mfaError.message : 'Unable to verify administrator MFA.');
+      setAuthStatus('denied');
+    }
+  };
+
+  const handleMfaEnroll = async () => {
+    setIsMfaBusy(true);
+    setAuthError(null);
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: 'totp',
+        friendlyName: 'NexHelp Operations',
+      });
+      if (error) throw error;
+      setMfaFactorId(data.id);
+      setMfaQrCode(data.totp.qr_code);
+      setMfaSecret(data.totp.secret);
+      setMfaCode('');
+      setAuthStatus('mfa_enroll');
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Unable to start authenticator setup.');
+    } finally {
+      setIsMfaBusy(false);
+    }
+  };
+
+  const handleMfaVerify = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!mfaFactorId || !/^\d{6}$/.test(mfaCode.trim())) {
+      setAuthError('Enter the current six-digit code from your authenticator app.');
+      return;
+    }
+    setIsMfaBusy(true);
+    setAuthError(null);
+    try {
+      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+      if (challengeError) throw challengeError;
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: mfaFactorId,
+        challengeId: challenge.id,
+        code: mfaCode.trim(),
+      });
+      if (verifyError) throw verifyError;
+      const { data: assurance, error: assuranceError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (assuranceError) throw assuranceError;
+      if (assurance.currentLevel !== 'aal2') throw new Error('The session has not reached MFA assurance level AAL2.');
+      setMfaQrCode(null);
+      setMfaSecret(null);
+      setMfaCode('');
+      setAuthError(null);
+      setAuthStatus('authorized');
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Authenticator verification failed.');
+    } finally {
+      setIsMfaBusy(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setAuthStatus('signed_out');
+    setUserEmail('');
+    setMfaFactorId('');
+    setMfaQrCode(null);
+    setMfaSecret(null);
+    setMfaCode('');
+  };
+
+  if (authStatus === 'authorized') {
+    return <AdminDashboard userEmail={userEmail} onSignOut={() => void handleSignOut()} />;
+  }
+
+  const heading = authStatus === 'configuration_error'
+    ? 'Operations connection required'
+    : authStatus === 'denied'
+      ? 'Administrator access denied'
+      : authStatus === 'checking'
+        ? 'Checking administrator access'
+        : authStatus === 'mfa_required'
+          ? 'Verify administrator MFA'
+          : authStatus === 'mfa_enroll'
+            ? 'Set up administrator MFA'
+            : 'NexHelp Operations';
+
+  return (
+    <main className="min-h-screen bg-zinc-950 flex items-center justify-center px-4 py-12">
+      <section className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl">
+        <div className="mb-8">
+          <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600 text-white">
+            <ShieldCheck className="h-6 w-6" />
+          </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">NexHelp · Operations</p>
+          <h1 className="mt-2 text-2xl font-bold text-white">{heading}</h1>
+          <p className="mt-2 text-sm text-zinc-400">Sign in with an account that has an admin or super-admin role.</p>
+        </div>
+        {authError && <div role="alert" className="mb-5 rounded-lg border border-rose-800 bg-rose-950/60 p-3 text-sm text-rose-200">{authError}</div>}
+        {authStatus === 'checking' ? (
+          <p className="text-sm text-zinc-400">Verifying your session…</p>
+        ) : authStatus === 'configuration_error' ? (
+          <p className="text-sm text-zinc-300">The dashboard is not configured to connect to a Supabase project. Set the required public environment variables in your deployment.</p>
+        ) : authStatus === 'denied' ? (
+          <button onClick={() => void handleSignOut()} className="w-full rounded-lg bg-zinc-700 px-4 py-3 text-sm font-semibold text-white hover:bg-zinc-600">Sign out</button>
+        ) : authStatus === 'mfa_required' || authStatus === 'mfa_enroll' ? (
+          <div className="space-y-4">
+            <p className="text-sm text-zinc-300">Administrator access is protected by TOTP multi-factor authentication. Set up an authenticator app once, then enter its six-digit code at each sign-in.</p>
+            {authStatus === 'mfa_enroll' && !mfaFactorId && (
+              <button type="button" disabled={isMfaBusy} onClick={() => void handleMfaEnroll()} className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">
+                {isMfaBusy ? 'Preparing authenticator…' : 'Set up authenticator app'}
+              </button>
+            )}
+            {mfaQrCode && (
+              <div className="rounded-lg bg-white p-4 text-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={mfaQrCode} alt="NexHelp Operations authenticator QR code" className="mx-auto h-52 w-52" />
+                <p className="mt-3 text-xs text-zinc-700">Scan with an authenticator app. If scanning is unavailable, enter this secret manually:</p>
+                <code className="mt-2 block break-all text-xs text-zinc-900">{mfaSecret}</code>
+              </div>
+            )}
+            {mfaFactorId && (authStatus === 'mfa_required' || mfaQrCode) && (
+              <form onSubmit={handleMfaVerify} className="space-y-3">
+                <label className="block text-sm font-medium text-zinc-300">
+                  Authenticator code
+                  <input required inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-center text-lg tracking-[0.4em] text-white outline-none focus:border-emerald-500" />
+                </label>
+                <button disabled={isMfaBusy} type="submit" className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">
+                  {isMfaBusy ? 'Verifying…' : 'Verify and continue'}
+                </button>
+              </form>
+            )}
+            {authStatus === 'mfa_enroll' && mfaFactorId && !mfaQrCode && (
+              <p className="text-sm text-amber-300">An incomplete authenticator setup already exists. Contact the project owner to reset the pending factor before trying again.</p>
+            )}
+            <button onClick={() => void handleSignOut()} className="w-full rounded-lg bg-zinc-700 px-4 py-3 text-sm font-semibold text-white hover:bg-zinc-600">Sign out</button>
+          </div>
+        ) : (
+          <form onSubmit={handleSignIn} className="space-y-4">
+            <label className="block text-sm font-medium text-zinc-300">
+              Email
+              <input required type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-500" />
+            </label>
+            <label className="block text-sm font-medium text-zinc-300">
+              Password
+              <input required type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-500" />
+            </label>
+            <button disabled={isSigningIn} type="submit" className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60">
+              {isSigningIn ? 'Signing in…' : 'Sign in to Operations'}
+            </button>
+          </form>
+        )}
+      </section>
+    </main>
   );
 }

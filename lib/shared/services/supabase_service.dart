@@ -38,31 +38,19 @@ class SupabaseService {
     UserRole initialRole = UserRole.customer,
   }) async {
     try {
-      final response = await client.auth.signUp(
+      // The trusted auth.users trigger provisions profiles and the allowlisted
+      // customer/provider role. The client must never write to user_roles.
+      return await client.auth.signUp(
         email: email,
         password: password,
-        data: {'full_name': fullName, 'phone': phone},
-      );
-
-      final user = response.user;
-      if (user != null) {
-        // Provision profile record
-        await client.from('profiles').upsert({
-          'id': user.id,
+        data: {
           'full_name': fullName,
           'phone': phone,
-          'email': email,
-          'account_status': 'active',
-        });
-
-        // Assign initial role
-        await client.from('user_roles').upsert({
-          'user_id': user.id,
-          'role': initialRole.value,
-        });
-      }
-
-      return response;
+          'initial_role': initialRole == UserRole.provider
+              ? 'provider'
+              : 'customer',
+        },
+      );
     } on AuthException catch (e) {
       throw AuthFailure(e.message, code: e.statusCode);
     } catch (e) {
@@ -171,6 +159,40 @@ class SupabaseService {
   // ---------------------------------------------------------------------------
   // Customer Booking & Requests
   // ---------------------------------------------------------------------------
+  Future<Map<String, dynamic>> diagnoseServiceIssue({
+    required String description,
+    String? categoryHint,
+    required bool aiConsent,
+    required String consentVersion,
+  }) async {
+    try {
+      final response = await client.functions.invoke(
+        'diagnose-service',
+        body: {
+          'description': description,
+          'categoryHint': categoryHint,
+          'aiConsent': aiConsent,
+          'aiConsentVersion': consentVersion,
+        },
+      );
+      if (response.status < 200 || response.status >= 300) {
+        final data = response.data;
+        final message = data is Map ? data['error']?.toString() : null;
+        throw ServerFailure(
+          message ?? 'AI assessment failed with status ${response.status}.',
+        );
+      }
+      if (response.data is! Map) {
+        throw ServerFailure('AI assessment returned an invalid response.');
+      }
+      return Map<String, dynamic>.from(response.data as Map);
+    } on ServerFailure {
+      rethrow;
+    } catch (e) {
+      throw ServerFailure('AI issue analysis unavailable: $e');
+    }
+  }
+
   Future<String> createServiceRequest({
     required String categoryId,
     required String serviceAreaId,

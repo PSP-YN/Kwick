@@ -2,26 +2,26 @@
 
 ## 1. Pilot Scope & Configuration
 
-- **Pilot Region:** Bengaluru South (HSR Layout & Koramangala sectors)
+- **Pilot Region:** The configured 560102 service zone (HSR Layout focus). Koramangala is not covered until a separate service-area record and eligible provider roster are configured.
 - **Active Pincodes:** `560102`
 - **Active Service Categories:**
   - Plumbing (Tap & faucet, pipe leaks, drain blocks, toilet repairs)
   - Electrical (Switches, sockets, fan/lighting fixtures, fault diagnosis)
 - **Pilot Operating Hours:** 08:00 AM – 08:00 PM IST
-- **Target Response Window:** < 15 minutes for operator dispatch review
+- **Internal dispatch target:** 15 minutes for operator review. This is an operational target, not a customer-facing SLA; measure it before publishing a guarantee.
 
 ---
 
 ## 2. Provider Onboarding & Verification Procedures
 
 1. **Application Submission:**
-   - Provider signs up on mobile app, fills out experience, selects category (`plumbing` or `electrical`), and uploads ID proof and trade certificates.
+   - Provider signs up, fills out experience and selects category (`plumbing` or `electrical`). Mobile document upload is not yet implemented; the provider remains pending until an operator completes an approved secure manual verification process.
    - Initial status: `pending`. Provider cannot view requests or receive assignments.
 2. **Operator Document Review:**
    - Operator logs into Admin Dashboard (`/admin/providers`).
-   - Reviews uploaded documents in private storage, checks trade background, and verifies phone number.
+   - Reviews permitted identity and trade evidence through the approved secure process, checks trade background and verifies contact details. Do not routinely collect or retain full Aadhaar numbers or biometrics; offer an alternative identity document.
 3. **Approval / Rejection:**
-   - Operator triggers `admin_verify_provider(provider_id, 'approved', notes)`.
+   - Operator records verification evidence and triggers `admin_verify_provider(provider_id, 'approved', notes)`. Any UIDAI-based offline-verification workflow requires separate legal approval and applicable consent and safeguards.
    - Provider verification changes to `approved`.
    - Provider becomes eligible for manual job dispatch.
 
@@ -43,7 +43,7 @@
    - Assignment status set to `offered`; request status set to `assigned`.
 4. **Provider Acceptance / Decline:**
    - Provider receives push and in-app alert.
-   - Provider has 15 minutes to accept or decline.
+   - No automatic offer-expiry job is currently implemented. Operators must monitor outstanding offers and use the authorized withdrawal/reassignment workflow; do not promise an automatic 15-minute expiry.
    - **Accept:** Provider availability changes to `busy`; request status becomes `accepted`.
    - **Decline:** Assignment marked `declined` with reason; request automatically reverts to `requested` for operator reassignment.
 
