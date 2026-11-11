@@ -1,124 +1,136 @@
 # NexHelp — Trust-First Home Services Marketplace
 
-NexHelp is a curated, trust-first home-services marketplace connecting customers with verified local service professionals (initial pilot: Plumbing and Electrical in Bengaluru, Karnataka, India).
+NexHelp is a trust-first home-services marketplace connecting customers with local plumbing and electrical professionals. The initial pilot is planned for HSR Layout and Koramangala, Bengaluru South (560102).
 
-The system consists of:
-1. **Flutter Mobile Application (`lib/`):** A single codebase providing role-aware customer and service provider experiences.
-2. **PostgreSQL & Supabase (`supabase/`):** Authoritative backend engine with Row-Level Security (RLS), atomic stored procedures (`SECURITY DEFINER`), and private file storage.
-3. **Internal Operations Dashboard (`admin/`):** A protected Next.js web application for manual provider verification, assignment dispatch, order tracking, and dispute management.
-4. **NexHelp Intelligence (`supabase/functions/diagnose-service/`):** An authenticated Gemini-powered issue-triage function that returns structured, advisory guidance before a booking is submitted.
+## System components
 
-> **Verification status:** Automated Flutter, admin, and PostgreSQL test suites are included in this repository. Their current results must be confirmed by CI for the commit being evaluated; this README does not imply that unexecuted tests have passed. Production launch also requires the external configuration listed in **[REMAINING_STEPS.md](REMAINING_STEPS.md)**.
+1. **Flutter mobile application (`lib/`):** Customer and service-provider experiences in one Android/iOS codebase.
+2. **Supabase and PostgreSQL (`supabase/`):** Authentication, RLS-protected data, transactional booking and assignment workflows, and private storage.
+3. **Operations console (`admin/`):** Protected Next.js dashboard for provider verification, manual dispatch, request tracking, and disputes.
+4. **NexHelp Intelligence (`supabase/functions/diagnose-service/`):** Optional Gemini-powered issue triage. Output is advisory; it cannot book, price, or dispatch.
+5. **Public landing page (`landing/`):** Responsive static website, separate from the authenticated operations console.
 
----
+> **Release status:** Automated tests and build jobs run in GitHub Actions. Check the latest workflow for the exact branch/commit before relying on a result. A successful CI build is not proof of a live backend, a signed production binary, or an operational service area. See [REMAINING_STEPS.md](REMAINING_STEPS.md).
 
-## Product Capabilities
+## Product capabilities
 
-- Customer and provider experiences in one Flutter application.
-- Plumbing and electrical service booking for the Bengaluru South pilot.
-- AI-assisted issue triage with urgency, safety alerts, follow-up questions, and dispatcher notes. AI is optional; customers can book without it.
-- Verified-provider onboarding, availability controls, and transactional assignment lifecycle.
-- Protected operations console with live database metrics, provider verification, dispatch, and audit-aware overrides.
-- Row-level security, least-privilege column grants, server-side AI secrets, and a private AI usage quota log.
+- Customer and provider workflows in one mobile app.
+- Plumbing and electrical service requests for the planned Bengaluru South pilot.
+- Optional issue triage with category suggestions, urgency, safety notes, and follow-up questions.
+- Customer review of AI suggestions; no silent booking changes.
+- Provider verification and assignment constraints enforced by the database.
+- Operations dashboard backed by live database queries, not fabricated metrics.
+- RLS, least-privilege grants, private document storage, and server-side AI secrets.
 
-## Architecture Summary
+## Repository layout
 
 ```
 nexhelp/
-├── android/              # Android native shell & manifest
-├── ios/                  # iOS Runner & configuration
+├── android/              # Android shell and release signing configuration
+├── ios/                  # iOS Runner
 ├── lib/                  # Flutter application
-│   ├── main.dart         # Entry point
-│   ├── app.dart          # Root widget & routing
-│   ├── core/             # Theme, routing, validation, error handling
-│   ├── shared/           # Models, UI widgets, API clients
-│   └── features/         # Auth, profiles, customer, provider, support
-├── admin/                # Next.js TypeScript internal operations dashboard
-├── supabase/             # PostgreSQL migrations, RLS policies, DB tests
-├── test/                 # Flutter unit & widget tests
-└── docs/                 # Architectural specifications, ADRs, audit
+├── test/                 # Flutter tests
+├── admin/                # Next.js operations console
+├── landing/              # Public static website
+├── supabase/             # Migrations, Edge Functions, database tests
+└── docs/                 # Architecture, security, release and hackathon docs
 ```
-
----
 
 ## Prerequisites
 
-- **Flutter SDK:** 3.44.0+ (Dart 3.12.0+)
-- **Java JDK:** OpenJDK 17
-- **Node.js:** v22+
-- **Supabase CLI:** v2.90.0+
-- **Docker:** Engine active for local Supabase emulator
+- Flutter 3.44+ / Dart 3.12+
+- Java 17
+- Node.js 22+
+- Supabase CLI 2.90+
+- Docker Engine for local Supabase
 
----
+## Local development
 
-## Local Development & Setup
+### 1. Start the local backend
 
-### 1. Environment Configuration
-Copy the template and configure your local keys:
-```bash
-cp .env.example .env
-```
-
-### 2. Supabase Backend
-Start the local Supabase emulator and apply migrations:
 ```bash
 supabase start
 supabase db reset
 ```
 
-### 3. Flutter Mobile Application
-Install dependencies, analyze code, and run tests:
+Copy the local Supabase API URL and anon key from `supabase status`. For Android Emulator, use `http://10.0.2.2:54321` as the API URL; for iOS Simulator use `http://127.0.0.1:54321`.
+
+### 2. Run the Flutter app
+
 ```bash
 flutter pub get
+flutter run \
+  --dart-define=SUPABASE_URL=http://10.0.2.2:54321 \
+  --dart-define=SUPABASE_ANON_KEY=<local-anon-key>
+```
+
+Local HTTP is accepted only in non-release builds. Production builds require an HTTPS hosted Supabase project URL and a real public anon/publishable key. If configuration is missing or invalid, the app shows a setup screen instead of crashing or silently using localhost.
+
+### 3. Validate Flutter and database
+
+```bash
 dart format --output=none --set-exit-if-changed .
 flutter analyze
 flutter test
-```
-To run on a connected device or emulator:
-```bash
-flutter run
+./supabase/tests/run_tests.sh
 ```
 
-### 4. Admin Operations Dashboard
+### 4. Run the operations console
+
 ```bash
 cd admin
-npm install
+npm ci
 npm run lint
 npm run dev
 ```
-Access the dashboard at `http://localhost:3000`.
 
----
+Configure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` before connecting it to a real backend.
 
-## Testing Commands
+### 5. Preview the public landing page
 
-| Component | Command |
-| :--- | :--- |
-| **Flutter Static Analysis** | `flutter analyze` |
-| **Flutter Unit & Widget Tests**| `flutter test` |
-| **Flutter Formatting Check** | `dart format --output=none --set-exit-if-changed .` |
-| **Admin Lint & Typecheck** | `npm --prefix admin run lint && npm --prefix admin run build` |
-| **Database Migrations & RLS** | `./supabase/tests/run_tests.sh` or `supabase test db` |
+```bash
+cd landing
+python3 -m http.server 4173
+```
 
----
+Open `http://localhost:4173`. Validate its structure and local links with:
 
-## Documentation Index
+```bash
+node landing/validate.mjs
+```
 
-- **[Production Launch Checklist (What's Left To Do)](REMAINING_STEPS.md)**
-- [Repository & Environment Audit](docs/PROJECT_AUDIT.md)
-- [System Architecture](docs/ARCHITECTURE.md)
-- [Implementation Plan & Phase Gates](docs/IMPLEMENTATION_PLAN.md)
-- [Deployment & Release Guide](docs/RELEASE.md)
-- [Architectural Decisions Log (ADR)](docs/DECISIONS.md)
-- [Known Issues & External Setup](docs/KNOWN_ISSUES.md)
-- [Database Schema & Invariants](docs/DATABASE.md)
-- [NexHelp Intelligence — AI Triage, Safety & Privacy](docs/AI_DIAGNOSIS.md)
-- [HackGlobal 2026 Submission Brief & Demo Plan](HACKGLOBAL_SUBMISSION.md)
-- [HackGlobal Pitch Deck Prompt](docs/HACKGLOBAL_PITCH_DECK_PROMPT.md)
-- [HackGlobal Demo Video Script](docs/HACKGLOBAL_DEMO_SCRIPT.md)
-- [Security & Access Control](docs/SECURITY.md)
-- [Operations & Pilot Runbook](docs/OPERATIONS.md)
+## Android builds
 
+### CI debug APK
+
+Every successful GitHub Actions run on the feature branch uploads `nexhelp-android-debug-apk` as a 14-day artifact. This is a test build, not a production-signed release and not connected to a live backend unless configured with actual project values.
+
+### Signed production release
+
+The repository includes a gated workflow at `.github/workflows/android-release.yml`. Before running it, configure these GitHub Actions secrets:
+
+- `SUPABASE_URL` — the dedicated NexHelp HTTPS project URL.
+- `SUPABASE_ANON_KEY` — the public anon/publishable key (never a service-role key).
+- `ANDROID_KEYSTORE_BASE64` — base64-encoded private upload keystore.
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+
+The workflow validates the secrets, creates temporary signing files, runs Flutter format/analyze/tests, and builds a signed APK and AAB. Temporary signing material is removed at the end of the job. Never commit a keystore or `android/key.properties`.
+
+## Deployment documentation
+
+- [Production launch checklist](REMAINING_STEPS.md)
+- [Public landing deployment](landing/README.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Security and access control](docs/SECURITY.md)
+- [Database schema and invariants](docs/DATABASE.md)
+- [AI triage safety and privacy](docs/AI_DIAGNOSIS.md)
+- [Release guide](docs/RELEASE.md)
+- [Operations runbook](docs/OPERATIONS.md)
+- [HackGlobal submission brief](HACKGLOBAL_SUBMISSION.md)
+- [Pitch deck prompt](docs/HACKGLOBAL_PITCH_DECK_PROMPT.md)
+- [Demo video script](docs/HACKGLOBAL_DEMO_SCRIPT.md)
 
 ## Project documentation
 
@@ -127,5 +139,4 @@ Access the dashboard at `http://localhost:3000`.
 - [Security policy](SECURITY.md)
 - [Changelog](CHANGELOG.md)
 - [License](LICENSE)
-- [Copyright and ownership](COPYRIGHT.md)
-- [Project documentation](docs/)
+- [Copyright](COPYRIGHT.md)
