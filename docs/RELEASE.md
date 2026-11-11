@@ -1,115 +1,163 @@
 # NexHelp Deployment & Release Guide
 
-## 1. Pilot Architecture Overview
-- **Pilot Location:** Bengaluru South, Karnataka (Pincode: `560102` — HSR Layout & Koramangala).
-- **Initial Core Verticals:** Plumbing & Electrical home repairs.
-- **Components:**
-  1. **Mobile Application (Flutter):** Android primary target; unified binary supporting Customer and Provider roles.
-  2. **Authoritative Backend (PostgreSQL 16 + Supabase):** 15 tables, `FORCE ROW LEVEL SECURITY`, `SECURITY DEFINER` RPC state transitions, immutable audit log.
-  3. **Operations Console (`admin/` Next.js 16 + TypeScript):** Dispatch queue, provider verification with credential review, and authoritative emergency override tool.
+## 1. Release scope and current boundaries
 
----
+- **Planned pilot:** HSR Layout and Koramangala, Bengaluru South (560102).
+- **Initial trades:** Plumbing and electrical.
+- **Mobile:** Flutter Android app; iOS project files exist but this repository's current CI does not compile an iOS binary.
+- **Backend:** Supabase PostgreSQL 17, Auth, private Storage, and the optional diagnosis Edge Function.
+- **Operations:** Protected Next.js console in `admin/`.
+- **Public website:** Static responsive site in `landing/`.
 
-## 2. Supabase Production Deployment Checklist
+Do not describe NexHelp as live until the dedicated backend, operations console, provider verification process, and customer support process are operational.
 
-### 2.1 Database Migrations
-Deploy migrations in chronological sequence:
+## 2. Supabase production deployment
+
+### 2.1 Provision a dedicated project
+
+Create a new project named `NexHelp` in `ap-south-1` (Mumbai). Do not reuse CareerOS or JanaSetu. The connected Supabase organization currently has a two-project free-tier limit; if project creation is blocked, resolve the project quota before continuing. Do not delete or upgrade another project without an explicit decision.
+
+Record the project URL, public anon/publishable key, database password, and project reference in an approved secrets manager. Never commit them.
+
+### 2.2 Apply database migrations
+
+From the repository root:
+
 ```bash
-# Push migrations to target Supabase project
-supabase db push --linked
+supabase login
+supabase link --project-ref <nexhelp-project-ref>
+supabase db push
 ```
-Files:
-1. `supabase/migrations/20261023000001_initial_schema.sql` (Tables, constraints, bigints in paise, indexes)
-2. `supabase/migrations/20261023000002_rls_policies.sql` (Row Level Security & lookup helpers)
-3. `supabase/migrations/20261023000003_rpc_functions.sql` (Atomic transaction RPCs)
-4. `supabase/migrations/20261023000004_seed_pilot_data.sql` (Area 560102, categories, storage buckets)
-5. `supabase/migrations/20261111000005_harden_admin_bootstrap.sql` (privileged bootstrap hardening)
-6. `supabase/migrations/20261111000006_auth_provisioning_and_write_privileges.sql` (Auth provisioning and least-privilege writes)
-7. `supabase/migrations/20261111000007_dispatch_provider_invariants.sql` (provider assignment invariants)
-8. `supabase/migrations/20261111000008_ai_diagnosis_usage.sql` (private AI usage quota log)
-9. `supabase/migrations/20261111000009_harden_definer_helpers.sql` (SECURITY DEFINER helper hardening)
-10. `supabase/migrations/20261111000010_atomic_ai_quota.sql` (atomic per-user AI quota reservation)
 
-### 2.2 Storage Buckets & Policies
-Verify the two private buckets are provisioned:
-- `provider-documents`: Private bucket for Aadhaar/PAN cards and electrical trade certificates.
-- `service-request-photos`: Bucket for customer issue photos and provider completion proof.
+The repository currently contains 10 ordered migrations. After deployment, verify:
+- Every application table has RLS enabled and expected policies.
+- Private buckets `provider-documents` and `service-request-photos` exist.
+- `reserve_ai_diagnosis_slot` is executable only by `service_role`.
+- The first-admin bootstrap procedure is restricted and used only for the designated operator.
+- No sample/demo records are presented as real customer or provider activity.
 
-### 2.3 Authentication & SMS OTP
-- In Supabase Dashboard > Authentication > Providers:
-  - Configure SMS Provider (e.g., Twilio, MSG91, or Exotel for India).
-  - Configure OTP expiry to 300 seconds (5 minutes).
-  - Rate-limit OTP dispatches to 5 per IP / phone number per hour.
+Run database advisors and inspect all warnings before onboarding real users.
 
----
+### 2.3 Configure Auth and Storage
 
-## 3. Android Mobile Application Release
+The current mobile authentication flow uses email/password; registration also collects a phone number as profile information. SMS OTP is not implemented as the active sign-in flow. Configure production email delivery, password policy, redirect URLs, abuse protection, and account recovery before launch.
 
-### 3.1 Keystore Generation
-Generate an upload signing key:
+Provider identity and trade-document upload is not yet available in the mobile onboarding flow. For the initial pilot, use a documented manual verification process with secure access controls before approving any provider. Do not approve a provider based only on self-declared details.
+
+Keep both storage buckets private. Verify upload, read, signed URL expiry, and unauthorized-access behavior with separate customer, provider, and admin accounts.
+
+### 2.4 Deploy the AI Edge Function
+
+Set the Gemini secret server-side only:
+
+```bash
+supabase secrets set GEMINI_API_KEY=<secret>
+supabase secrets set GEMINI_MODEL=<supported-model-id>
+supabase functions deploy diagnose-service
+```
+
+Use a model identifier confirmed against the current Gemini API account. Do not put the Gemini key in Flutter, Next.js public environment variables, GitHub source, or the landing page. Test quota enforcement, invalid output handling, timeout behavior, and the no-AI booking path.
+
+## 3. Android release
+
+### 3.1 Generate and protect the upload keystore
+
+Generate the key once and back it up securely:
+
 ```bash
 keytool -genkey -v -keystore android/app/upload-keystore.jks \
   -alias nexhelp-upload -keyalg RSA -keysize 2048 -validity 10000
 ```
 
-### 3.2 Key Configuration (`android/key.properties`)
-Create `android/key.properties` (never commit to version control):
-```properties
-storePassword=SECURE_STORE_PASSWORD
-keyPassword=SECURE_KEY_PASSWORD
-keyAlias=nexhelp-upload
-storeFile=upload-keystore.jks
-```
+Create `android/key.properties` from `android/key.properties.example`. The file and keystore are git-ignored. Never lose the keystore or its passwords; losing the upload key complicates future updates.
 
-### 3.3 Release Bundle Build
+### 3.2 Build locally
+
 ```bash
-flutter build appbundle --release \
-  --dart-define=SUPABASE_URL=https://<your-project-id>.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=<your-anon-publishable-key>
+flutter pub get
+dart format --output=none --set-exit-if-changed .
+flutter analyze
+flutter test
+flutter build apk --release --obfuscate --split-debug-info=build/symbols \
+  --dart-define=SUPABASE_URL=https://<nexhelp-project-ref>.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=<public-anon-or-publishable-key>
+flutter build appbundle --release --obfuscate --split-debug-info=build/symbols \
+  --dart-define=SUPABASE_URL=https://<nexhelp-project-ref>.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=<public-anon-or-publishable-key>
 ```
-Output: `build/app/outputs/bundle/release/app-release.aab`
 
----
+Release builds require the dedicated release signing configuration. Cleartext HTTP is disabled for release variants; local Supabase HTTP is permitted only in non-release Android builds.
 
-## 4. iOS Deployment Status & Pipeline
-- **Local Development Environment:** Linux Fedora x86_64.
-- **Platform Limitation:** Xcode and macOS SDK are not locally available on Linux.
-- **CI/CD Build Pipeline:** iOS builds are automated via GitHub Actions using `macos-latest` runners in `.github/workflows/ci.yml`.
-- **Certificates Required:** Apple Developer Program Certificate (Distribution), Provisioning Profile configured with Associated Domains for deep linking.
+### 3.3 Automated release workflow
 
----
+`.github/workflows/android-release.yml` can build signed APK and AAB artifacts after these GitHub Actions secrets are configured:
 
-## 5. Operations Console (`admin/`) Deployment
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_PASSWORD`
+- `ANDROID_KEY_ALIAS`
 
-### 5.1 Environment Variables
-Set the following on Vercel, Cloudflare Pages, or Docker:
+The workflow checks required configuration, writes temporary signing files, runs format/analyze/tests, builds both release outputs, uploads artifacts, and removes temporary keystore files. Run it manually only after the backend is deployed and tested, or tag a release as `v*`.
+
+The ordinary CI workflow creates a **debug APK test artifact**. It is not a production-signed binary and must not be submitted to Google Play.
+
+### 3.4 Device acceptance tests
+
+Before a public release, test on physical Android devices:
+- Fresh install, upgrade install, and app relaunch.
+- Sign up, email confirmation/recovery, sign in, sign out, expired session.
+- Customer booking validation and duplicate-submit behavior.
+- AI unavailable, quota exhausted, malformed response, and safety warning cases.
+- Provider onboarding, pending approval, approval/rejection, availability, and assignment state transitions.
+- Slow network, offline transitions, backend errors, and retry behavior.
+- Accessibility text scaling, keyboard behavior, TalkBack labels, and small-screen layouts.
+
+## 4. Public landing page deployment
+
+The static public site lives in `landing/`. It does not require environment variables and does not collect user data.
+
+Vercel project settings:
+- Repository: `PSP-YN/NexHelp`
+- Root directory: `landing`
+- Framework preset: Other
+- Build command: none
+- Output directory: `.`
+- Install command: none
+
+Run `node landing/validate.mjs` before deployment. Confirm security headers, mobile navigation, links, metadata, and page rendering on mobile and desktop. Keep launch wording consistent with actual backend and pilot readiness.
+
+## 5. Operations console deployment
+
+Deploy `admin/` as a separate Vercel project with root directory `admin`.
+
+Required environment variables:
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://<your-project-id>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-publishable-key>
+NEXT_PUBLIC_SUPABASE_URL=https://<nexhelp-project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<public-anon-or-publishable-key>
 ```
 
-### 5.2 Build & Start
-```bash
-cd admin
-npm ci
-npm run build
-npm run start
-```
-The console exposes:
-- Real-time KPI cards for pending dispatch, active jobs, and verified partners.
-- Manual Dispatch queue with provider allocation modal.
-- Identity and trade license verification audit log.
-- Emergency override tool with mandatory reason logging.
+Never use a service-role key in `NEXT_PUBLIC_*` variables. After deployment:
+- Confirm unauthenticated users cannot access operational data.
+- Bootstrap the designated first admin through the restricted database procedure.
+- Verify provider verification, dispatch, and dispute actions against live data.
+- Test that admin-only RPCs reject ordinary authenticated users.
 
+## 6. iOS release status
 
-## AI Diagnosis Function
+The current CI workflow does not compile or sign an iOS app. iOS release validation requires a macOS/Xcode runner, Apple signing certificates, provisioning profiles, bundle identifier configuration, and TestFlight acceptance testing. Treat iOS as not release-ready until that pipeline is added and executed.
 
-The optional customer issue-triage feature requires a server-side Gemini API key. Never place this key in Flutter, the web app, or source control.
+## 7. Go-live gate
 
-```bash
-supabase secrets set GEMINI_API_KEY=your_key
-supabase secrets set GEMINI_MODEL=gemini-3.8-flash
-supabase functions deploy diagnose-service
-```
-
-The function requires an authenticated Supabase user, applies a per-user hourly usage limit, does not persist raw issue descriptions, and returns advisory triage only. Customers can still submit bookings when AI is unavailable.
+Do not open the pilot until all are complete:
+1. Dedicated NexHelp Supabase project created in Mumbai and migrations applied.
+2. Database advisors and RLS/security tests reviewed against the live project.
+3. Production email/auth, recovery, rate limits, and privacy notices configured.
+4. AI secret and Edge Function deployed and tested, with non-AI fallback verified.
+5. Admin console deployed and restricted to designated operators.
+6. Manual provider verification process, support escalation, and dispute process staffed.
+7. Signed Android release built and installed on physical devices.
+8. Privacy policy, terms, consent, data-retention, and incident-response procedures reviewed.
+9. End-to-end customer, provider, and operator acceptance tests completed.
+10. Public landing page wording and pilot availability confirmed by the operations owner.
