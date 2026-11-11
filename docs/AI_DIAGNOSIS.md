@@ -36,10 +36,10 @@ NexHelp Intelligence helps a customer describe a home-service problem and gives 
 Run from the repository root after linking the correct NexHelp Supabase project:
 
 ```bash
-supabase secrets set GEMINI_API_KEY=your_google_ai_studio_key
-supabase secrets set GEMINI_MODEL=gemini-3.8-flash
-supabase db push
-supabase functions deploy diagnose-service
+supabase secrets set GEMINI_API_KEY=your_google_ai_studio_key --yes
+supabase secrets set GEMINI_MODEL=gemini-3.8-flash --yes
+supabase db push --yes --remote
+supabase functions deploy diagnose-service --yes
 ```
 
 The project must have all ten migrations applied. Never commit the API key or service-role key.
