@@ -8,7 +8,7 @@ on:
 
 jobs:
   flutter-validation:
-    name: Flutter Lint & Tests
+    name: Flutter Lint, Tests & Android APK
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,14 +31,6 @@ jobs:
       - name: Check Formatting
         run: dart format --output=none --set-exit-if-changed .
 
-      - name: Show Dart formatting diff on failure
-        if: failure()
-        run: |
-          for file in lib/shared/services/supabase_service.dart lib/features/customer/booking/booking_screen.dart; do
-            dart format --output=show "$file" > /tmp/formatted.dart
-            diff -u "$file" /tmp/formatted.dart || true
-          done
-
       - name: Analyze Code
         run: flutter analyze
 
@@ -47,6 +39,26 @@ jobs:
 
       - name: Compile Android debug APK
         run: flutter build apk --debug --dart-define=SUPABASE_URL=https://example.supabase.co --dart-define=SUPABASE_ANON_KEY=ci-placeholder
+
+      - name: Upload Android debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexhelp-android-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  landing-validation:
+    name: Public Landing Page Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate landing page structure, links and responsive features
+        run: node landing/validate.mjs
 
   admin-validation:
     name: Admin Next.js Build & Lint
@@ -81,7 +93,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Run Database Tests in Isolated Postgres
         run: |
           chmod +x supabase/tests/run_tests.sh
