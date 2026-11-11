@@ -636,8 +636,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   controller: _notesController,
                   maxLines: 2,
                   validator: (value) =>
-                      value != null && value.trim().length > 250
-                      ? 'Notes cannot exceed 250 characters.'
+                      value != null && value.trim().length > AppConfig.maxNotesLength
+                      ? 'Notes cannot exceed ${AppConfig.maxNotesLength} characters.'
                       : null,
                 ),
                 const SizedBox(height: AppSpacing.xl),
