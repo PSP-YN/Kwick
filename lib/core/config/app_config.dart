@@ -25,6 +25,7 @@ class AppConfig {
     final isHttpsProjectUrl = supabaseUrl.startsWith('https://') &&
         supabaseUrl.endsWith('.supabase.co');
     final isLocalDevelopmentUrl = !kReleaseMode &&
+        !kProfileMode &&
         (supabaseUrl == 'http://10.0.2.2:54321' ||
             supabaseUrl == 'http://127.0.0.1:54321');
     final hasPublicKey = supabaseAnonKey.startsWith('eyJ') ||
