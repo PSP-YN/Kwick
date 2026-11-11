@@ -64,6 +64,7 @@ COMMIT;
 \i supabase/migrations/20261111000010_atomic_ai_quota.sql
 \i supabase/migrations/20261111000011_validate_booking_inputs.sql
 \i supabase/migrations/20261111000012_ai_consent_audit.sql
+\i supabase/migrations/20261111000013_require_admin_mfa.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
@@ -111,6 +112,7 @@ BEGIN
 
     -- Admin Bootstrap
     PERFORM set_config('request.jwt.claim.sub', v_admin_id::text, true);
+    PERFORM set_config('request.jwt.claims', pg_catalog.jsonb_build_object('sub', v_admin_id::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
     PERFORM public.bootstrap_admin(v_admin_id);
     ASSERT public.has_role(v_admin_id, 'admin') = true, 'Test 2 Failed: Admin role missing';
     ASSERT public.has_role(v_admin_id, 'super_admin') = true, 'Test 2 Failed: Super Admin role missing';
