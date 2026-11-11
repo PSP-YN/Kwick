@@ -35,6 +35,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   DateTime? _scheduledDateTime;
   bool _isSubmitting = false;
   bool _isDiagnosing = false;
+  bool _aiConsentGiven = false;
   Map<String, dynamic>? _diagnosis;
   String? _diagnosisError;
   String? _errorMessage;
@@ -55,6 +56,10 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   }
 
   Future<void> _analyzeIssue() async {
+    if (!_aiConsentGiven) {
+      setState(() => _diagnosisError = 'Consent is required for optional AI triage. You can also continue without AI.');
+      return;
+    }
     final description = _descriptionController.text.trim();
     final validationError = Validators.validateDescription(description);
     if (validationError != null) {
@@ -79,6 +84,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
           .diagnoseServiceIssue(
             description: description,
             categoryHint: categoryHint,
+            aiConsent: _aiConsentGiven,
+            consentVersion: AppConfig.aiConsentVersion,
           );
       if (mounted) setState(() => _diagnosis = result);
     } catch (e) {
@@ -333,7 +340,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
-                          'NexHelp pilot is operating in Bengaluru South (${AppConfig.pilotPincode} HSR/Koramangala).',
+                          'NexHelp currently serves pincode ${AppConfig.pilotPincode} (HSR Layout focus). Requests outside this service zone cannot be dispatched.',
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.info,
                           ),
@@ -380,6 +387,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                           child: InkWell(
                             onTap: () => setState(() {
                               _selectedCategoryId = cat.id;
+                              _aiConsentGiven = false;
                               _diagnosis = null;
                               _diagnosisError = null;
                             }),
@@ -455,8 +463,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   maxLines: 3,
                   validator: Validators.validateDescription,
                   onChanged: (_) {
-                    if (_diagnosis != null || _diagnosisError != null) {
+                    if (_diagnosis != null || _diagnosisError != null || _aiConsentGiven) {
                       setState(() {
+                        _aiConsentGiven = false;
                         _diagnosis = null;
                         _diagnosisError = null;
                       });
@@ -464,15 +473,34 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   },
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Your issue description is sent to Gemini for triage. Do not include names, phone numbers or your address.',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textMuted,
+                CheckboxListTile(
+                  value: _aiConsentGiven,
+                  onChanged: _isDiagnosing || _isSubmitting
+                      ? null
+                      : (value) => setState(() {
+                          _aiConsentGiven = value ?? false;
+                          if (!_aiConsentGiven) {
+                            _diagnosis = null;
+                            _diagnosisError = null;
+                          }
+                        }),
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  dense: true,
+                  title: Text(
+                    'I consent to send this issue description and selected category to Google Gemini for one optional AI assessment.',
+                    style: AppTextStyles.bodySmall,
+                  ),
+                  subtitle: Text(
+                    'This is optional; you can submit a booking without AI. Do not include names, phone numbers, exact addresses, Aadhaar/PAN, health or financial details. Obvious phone, email and ID patterns are redacted, but automated redaction is not guaranteed.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 OutlinedButton.icon(
-                  onPressed: _isDiagnosing || _isSubmitting
+                  onPressed: _isDiagnosing || _isSubmitting || !_aiConsentGiven
                       ? null
                       : _analyzeIssue,
                   icon: _isDiagnosing
