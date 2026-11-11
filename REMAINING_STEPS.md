@@ -33,7 +33,7 @@ Once the project exists:
    supabase link --project-ref <nexhelp-project-ref>
    supabase db push --yes --remote
    ```
-3. Apply all 12 ordered migrations.
+3. Apply all 13 ordered migrations.
 4. Verify all application tables have RLS enabled, both private storage buckets exist, and the restricted quota RPC is executable only by `service_role`.
 5. Run Supabase database advisors and resolve warnings before real user data is introduced.
 
@@ -43,6 +43,7 @@ The current mobile authentication flow uses email/password. Registration also co
 
 Before pilot:
 - Configure production email delivery, confirmation, recovery, redirect URLs, password policy, and abuse/rate limits.
+- Enroll TOTP for every admin/super-admin and verify that AAL1 sessions cannot read admin data or call admin RPCs.
 - Test fresh registration, confirmation, sign-in, sign-out, session refresh, and password recovery.
 - Keep `provider-documents` and `service-request-photos` private.
 - Test upload/read/signed URL expiry and cross-user access denial with separate customer, provider, and admin accounts.
