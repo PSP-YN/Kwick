@@ -280,7 +280,7 @@ export default function ProviderVerification({
                   rows={3}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. Government Aadhaar card verified against DigiLocker. Electrical license #KA-2024-BLR confirmed active."
+                  placeholder="e.g. Alternative government ID reviewed; electrical trade credential and validity checked."
                   className="w-full text-xs border border-zinc-300 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
