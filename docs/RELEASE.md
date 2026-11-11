@@ -29,18 +29,19 @@ supabase link --project-ref <nexhelp-project-ref>
 supabase db push --yes --remote
 ```
 
-The repository currently contains 12 ordered migrations. After deployment, verify:
+The repository currently contains 13 ordered migrations. After deployment, verify:
 - Every application table has RLS enabled and expected policies.
 - Private buckets `provider-documents` and `service-request-photos` exist.
 - `reserve_ai_diagnosis_slot` is executable only by `service_role`.
 - The first-admin bootstrap procedure is restricted and used only for the designated operator.
+- Admin and super-admin access is enforced at the database layer with Supabase Auth AAL2; enroll and verify TOTP for every operator account before launch.
 - No sample/demo records are presented as real customer or provider activity.
 
 Run database advisors and inspect all warnings before onboarding real users.
 
 ### 2.3 Configure Auth and Storage
 
-The current mobile authentication flow uses email/password; registration also collects a phone number as profile information. SMS OTP is not implemented as the active sign-in flow. Configure production email delivery, password policy, redirect URLs, abuse protection, and account recovery before launch.
+The current mobile authentication flow uses email/password; registration also collects a phone number as profile information. SMS OTP is not implemented as the active sign-in flow. Configure production email delivery, password policy, redirect URLs, abuse protection, and account recovery before launch. Enable TOTP verification in Supabase Auth and verify each admin reaches AAL2; AAL1 sessions must be denied by database authorization.
 
 Provider identity and trade-document upload is not yet available in the mobile onboarding flow. For the initial pilot, use a documented manual verification process with secure access controls before approving any provider. Do not approve a provider based only on self-declared details.
 
