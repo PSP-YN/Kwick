@@ -112,7 +112,7 @@ export default function ProviderVerification({
             Provider Identity & Credential Audits
           </h2>
           <p className="text-xs text-zinc-500">
-            Review Government Photo IDs (Aadhaar/PAN) and trade certifications before enabling on-field matching.
+            Review a permitted identity document and trade qualification before enabling on-field matching. Do not request full Aadhaar numbers or biometric data; use an alternative ID unless a UIDAI-compliant process has been separately approved.
           </p>
         </div>
 
