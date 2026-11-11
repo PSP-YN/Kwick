@@ -57,6 +57,6 @@ class AppConfig {
   static const int minDescriptionLength = 10;
   static const int maxDescriptionLength = 2000;
   static const int minAddressLength = 5;
-  static const int maxAddressLength = 1000;
-  static const int maxNotesLength = 1000;
+  static const int maxAddressLength = 500;
+  static const int maxNotesLength = 250;
 }
