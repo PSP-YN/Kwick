@@ -312,7 +312,10 @@ export default function AdminPage() {
       setMfaSecret(null);
       setAuthStatus('mfa_required');
     } else {
-      const pendingTotp = factors.totp.find((factor) => (factor.status as string) === 'unverified');
+      const allFactors = factors.all as Array<{ id: string; factor_type: string; status: string }>;
+      const pendingTotp = allFactors.find(
+        (factor) => factor.factor_type === 'totp' && factor.status === 'unverified',
+      );
       setMfaFactorId(pendingTotp?.id ?? '');
       setMfaQrCode(null);
       setMfaSecret(null);
