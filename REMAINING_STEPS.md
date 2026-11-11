@@ -33,7 +33,7 @@ Once the project exists:
    supabase link --project-ref <nexhelp-project-ref>
    supabase db push --yes --remote
    ```
-3. Apply all 10 ordered migrations.
+3. Apply all 12 ordered migrations.
 4. Verify all application tables have RLS enabled, both private storage buckets exist, and the restricted quota RPC is executable only by `service_role`.
 5. Run Supabase database advisors and resolve warnings before real user data is introduced.
 
