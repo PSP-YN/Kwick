@@ -26,7 +26,7 @@ The repository includes an India-specific compliance register, draft privacy not
 - Customer review of AI suggestions; no silent booking changes.
 - Provider verification and assignment constraints enforced by the database.
 - Operations dashboard backed by live database queries, not fabricated metrics.
-- RLS, least-privilege grants, private document storage, and server-side AI secrets.
+- RLS, least-privilege grants, private document storage, server-side AI secrets, and AAL2/TOTP enforcement for administrator data and RPCs.
 
 ## Repository layout
 
