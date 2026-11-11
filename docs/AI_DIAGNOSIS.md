@@ -46,7 +46,7 @@ supabase db push --yes --remote
 supabase functions deploy diagnose-service --yes
 ```
 
-The project must have all twelve ordered migrations applied. Never commit the API key or service-role key.
+The project must have all thirteen ordered migrations applied. Never commit the API key or service-role key.
 
 ## Model configuration
 
