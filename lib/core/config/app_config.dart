@@ -42,6 +42,7 @@ class AppConfig {
   static const String pilotCity = 'Bengaluru';
   static const String pilotState = 'Karnataka';
   static const String pilotPincode = '560102';
+  static const String aiConsentVersion = '2026-11-11-v1';
   static const String pilotAreaName =
       'Bengaluru 560102 Service Zone — HSR Layout Focus';
   static const String pilotAreaId = 'a0000000-0000-0000-0000-000000000001';
