@@ -21,15 +21,27 @@ begin
     next_check := policy_row.with_check;
 
     if next_qual is not null then
-      next_qual := replace(next_qual, 'auth.uid()', '(select auth.uid())');
-      next_qual := replace(next_qual, 'auth.jwt()', '(select auth.jwt())');
-      next_qual := replace(next_qual, 'auth.role()', '(select auth.role())');
+      if next_qual !~* '\\(select\\s+auth\\.uid\\(\\)\\)' then
+        next_qual := replace(next_qual, 'auth.uid()', '(select auth.uid())');
+      end if;
+      if next_qual !~* '\\(select\\s+auth\\.jwt\\(\\)\\)' then
+        next_qual := replace(next_qual, 'auth.jwt()', '(select auth.jwt())');
+      end if;
+      if next_qual !~* '\\(select\\s+auth\\.role\\(\\)\\)' then
+        next_qual := replace(next_qual, 'auth.role()', '(select auth.role())');
+      end if;
     end if;
 
     if next_check is not null then
-      next_check := replace(next_check, 'auth.uid()', '(select auth.uid())');
-      next_check := replace(next_check, 'auth.jwt()', '(select auth.jwt())');
-      next_check := replace(next_check, 'auth.role()', '(select auth.role())');
+      if next_check !~* '\\(select\\s+auth\\.uid\\(\\)\\)' then
+        next_check := replace(next_check, 'auth.uid()', '(select auth.uid())');
+      end if;
+      if next_check !~* '\\(select\\s+auth\\.jwt\\(\\)\\)' then
+        next_check := replace(next_check, 'auth.jwt()', '(select auth.jwt())');
+      end if;
+      if next_check !~* '\\(select\\s+auth\\.role\\(\\)\\)' then
+        next_check := replace(next_check, 'auth.role()', '(select auth.role())');
+      end if;
     end if;
 
     statement := format(
