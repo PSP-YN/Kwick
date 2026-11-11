@@ -63,6 +63,7 @@ COMMIT;
 \i supabase/migrations/20261111000009_harden_definer_helpers.sql
 \i supabase/migrations/20261111000010_atomic_ai_quota.sql
 \i supabase/migrations/20261111000011_validate_booking_inputs.sql
+\i supabase/migrations/20261111000012_ai_consent_audit.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
@@ -447,6 +448,10 @@ BEGIN
     ASSERT (SELECT count(*) FROM public.ai_diagnosis_usage
             WHERE user_id = '22222222-2222-2222-2222-222222222222') = 5,
         'Test 15 Failed: AI usage log count does not match successful reservations';
+    ASSERT (SELECT count(*) FROM public.ai_diagnosis_usage
+            WHERE user_id = '22222222-2222-2222-2222-222222222222'
+              AND consent_version = '2026-11-11-v1') = 5,
+        'Test 15 Failed: AI usage records do not retain the accepted consent version';
     RAISE NOTICE '[PASS] Test 15: AI quota reservation is atomic and server-role-only';
 END;
 $audit$;
