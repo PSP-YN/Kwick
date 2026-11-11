@@ -1,6 +1,6 @@
 # NexHelp — Trust-First Home Services Marketplace
 
-NexHelp is a trust-first home-services marketplace connecting customers with local plumbing and electrical professionals. The initial pilot is planned for HSR Layout and Koramangala, Bengaluru South (560102).
+NexHelp is a trust-first home-services marketplace connecting customers with local plumbing and electrical professionals. The initial pilot is limited to the 560102 service zone, with an HSR Layout focus. Koramangala is out of scope until its separate service-area and provider coverage are configured.
 
 ## System components
 
@@ -17,7 +17,7 @@ NexHelp is a trust-first home-services marketplace connecting customers with loc
 ## Product capabilities
 
 - Customer and provider workflows in one mobile app.
-- Plumbing and electrical service requests for the planned Bengaluru South pilot.
+- Plumbing and electrical service requests for the planned 560102 service zone (HSR Layout focus).
 - Optional issue triage with category suggestions, urgency, safety notes, and follow-up questions.
 - Customer review of AI suggestions; no silent booking changes.
 - Provider verification and assignment constraints enforced by the database.
@@ -43,7 +43,7 @@ nexhelp/
 - Flutter 3.44+ / Dart 3.12+
 - Java 17
 - Node.js 22+
-- Supabase CLI 2.90+
+- Supabase CLI 3.1.0 (pinned in deployment CI; CLI v3 remote-target flags are used).
 - Docker Engine for local Supabase
 
 ## Local development
