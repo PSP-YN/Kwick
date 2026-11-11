@@ -231,15 +231,22 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       );
 
       if (pickedTime != null) {
-        setState(() {
-          _scheduledDateTime = DateTime(
-            pickedDate.year,
-            pickedDate.month,
-            pickedDate.day,
-            pickedTime.hour,
-            pickedTime.minute,
-          );
-        });
+        final selectedDateTime = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+        if (selectedDateTime.isBefore(DateTime.now())) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Choose a future appointment time.')),
+            );
+          }
+          return;
+        }
+        setState(() => _scheduledDateTime = selectedDateTime);
       }
     }
   }
@@ -264,13 +271,21 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       if (_diagnosis != null) {
         final safetyAlerts =
             (_diagnosis!['safety_alerts'] as List<dynamic>? ?? [])
-                .map((item) => item.toString())
+                .take(2)
+                .map((item) {
+                  final alert = item.toString().trim();
+                  return alert.length > 120 ? alert.substring(0, 120) : alert;
+                })
                 .join('; ');
+        final rawDispatcherNote =
+            (_diagnosis!['dispatcher_note'] ?? '').toString().trim();
+        final dispatcherNote = rawDispatcherNote.length > 250
+            ? rawDispatcherNote.substring(0, 250)
+            : rawDispatcherNote;
         noteParts.add(
-          'NexHelp AI triage (advisory): ${_diagnosis!['summary']} '
-          'Urgency: ${_diagnosis!['urgency']}. '
-          'Dispatcher note: ${_diagnosis!['dispatcher_note']}. '
-          'Safety alerts: ${safetyAlerts.isEmpty ? 'None reported' : safetyAlerts}.',
+          'NexHelp AI triage (advisory). Urgency: \${_diagnosis!['urgency']}. '
+          'Dispatcher: $dispatcherNote. '
+          'Safety: \${safetyAlerts.isEmpty ? 'No alerts returned' : safetyAlerts}.',
         );
       }
       final customerNotes = noteParts.join('\n\n');
@@ -299,10 +314,12 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         context.go('/customer/orders/$requestId');
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        _isSubmitting = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isSubmitting = false;
+        });
+      }
     }
   }
 
@@ -611,6 +628,10 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                       'E.g., Call before arrival, ask for security gate pass code',
                   controller: _notesController,
                   maxLines: 2,
+                  validator: (value) =>
+                      value != null && value.trim().length > 400
+                      ? 'Notes cannot exceed 400 characters.'
+                      : null,
                 ),
                 const SizedBox(height: AppSpacing.xl),
 
