@@ -49,10 +49,16 @@ jobs:
             https://*.supabase.co) ;;
             *) echo "::error::SUPABASE_URL must be the dedicated HTTPS NexHelp project URL"; exit 1 ;;
           esac
+          if [[ "$SUPABASE_URL" == *example* || "$SUPABASE_URL" == *placeholder* ]]; then
+            echo "::error::SUPABASE_URL still contains a placeholder"; exit 1
+          fi
           case "$SUPABASE_ANON_KEY" in
             eyJ*|sb_publishable_*) ;;
             *) echo "::error::SUPABASE_ANON_KEY is not a recognized public Supabase key"; exit 1 ;;
           esac
+          if [[ "$SUPABASE_ANON_KEY" == *dummy* || "$SUPABASE_ANON_KEY" == *placeholder* ]]; then
+            echo "::error::SUPABASE_ANON_KEY still contains a placeholder"; exit 1
+          fi
 
       - name: Configure private Android signing
         env:
@@ -63,6 +69,8 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          test -s android/app/upload-keystore.jks
+          keytool -list -keystore android/app/upload-keystore.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
           cat > android/key.properties <<EOF
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyPassword=$ANDROID_KEY_PASSWORD
@@ -99,7 +107,7 @@ jobs:
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
-            build/symbols/
+            build/symbols-apk/\n            build/symbols-aab/
           if-no-files-found: error
           retention-days: 30
 
