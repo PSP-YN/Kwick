@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Global application configuration and environment constants
 class AppConfig {
   AppConfig._();
@@ -17,16 +19,22 @@ class AppConfig {
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_anon_key_for_local_development',
   );
 
-  /// Prevents shipping a binary that silently points at localhost or CI placeholders.
+  /// Accepts HTTPS hosted projects in every build and local emulator URLs only
+  /// in debug/profile builds. CI placeholders and dummy keys are always rejected.
   static bool get hasValidSupabaseConfig {
     final isHttpsProjectUrl = supabaseUrl.startsWith('https://') &&
         supabaseUrl.endsWith('.supabase.co');
+    final isLocalDevelopmentUrl = !kReleaseMode &&
+        (supabaseUrl == 'http://10.0.2.2:54321' ||
+            supabaseUrl == 'http://127.0.0.1:54321');
     final hasPublicKey = supabaseAnonKey.startsWith('eyJ') ||
         supabaseAnonKey.startsWith('sb_publishable_');
     final isKnownPlaceholder = supabaseAnonKey.contains('dummy_') ||
         supabaseAnonKey == 'ci-placeholder';
 
-    return isHttpsProjectUrl && hasPublicKey && !isKnownPlaceholder;
+    return (isHttpsProjectUrl || isLocalDevelopmentUrl) &&
+        hasPublicKey &&
+        !isKnownPlaceholder;
   }
 
   // Pilot Region Configuration
