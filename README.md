@@ -14,6 +14,10 @@ NexHelp is a trust-first home-services marketplace connecting customers with loc
 
 > **Release status:** Automated tests and build jobs run in GitHub Actions. Check the latest workflow for the exact branch/commit before relying on a result. A successful CI build is not proof of a live backend, a signed production binary, or an operational service area. See [REMAINING_STEPS.md](REMAINING_STEPS.md).
 
+## Legal and privacy readiness
+
+The repository includes an India-specific compliance register, draft privacy notice, customer terms, provider agreement, incident response runbook, data-retention schedule and processor register. These are pre-launch drafts, not legal sign-off. The legal entity, grievance officer, contracts, age policy, provider verification and statutory processes must be completed before public operations.
+
 ## Product capabilities
 
 - Customer and provider workflows in one mobile app.
