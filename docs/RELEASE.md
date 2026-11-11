@@ -29,7 +29,7 @@ supabase link --project-ref <nexhelp-project-ref>
 supabase db push --yes --remote
 ```
 
-The repository currently contains 10 ordered migrations. After deployment, verify:
+The repository currently contains 12 ordered migrations. After deployment, verify:
 - Every application table has RLS enabled and expected policies.
 - Private buckets `provider-documents` and `service-request-photos` exist.
 - `reserve_ai_diagnosis_slot` is executable only by `service_role`.
@@ -53,10 +53,14 @@ Set the Gemini secret server-side only:
 ```bash
 supabase secrets set GEMINI_API_KEY=<secret> --yes
 supabase secrets set GEMINI_MODEL=<supported-model-id> --yes
+# Only after verifying the API key belongs to a paid Gemini API project:
+supabase secrets set GEMINI_PAID_TIER_CONFIRMED=true --yes
+# Exact browser origins only; do not use a wildcard:
+supabase secrets set NEXHELP_ALLOWED_ORIGINS=<comma-separated-exact-origins> --yes
 supabase functions deploy diagnose-service --yes
 ```
 
-Use a model identifier confirmed against the current Gemini API account. Do not put the Gemini key in Flutter, Next.js public environment variables, GitHub source, or the landing page. Test quota enforcement, invalid output handling, timeout behavior, and the no-AI booking path.
+Use a model identifier confirmed against the current Gemini API account. Do not put the Gemini key in Flutter, Next.js public environment variables, GitHub source, or the landing page. Test explicit consent enforcement, paid-tier fail-closed behavior, identifier redaction, quota enforcement, invalid output handling, timeout behavior, and the no-AI booking path.
 
 ## 3. Android release
 
