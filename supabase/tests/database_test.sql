@@ -110,10 +110,13 @@ BEGIN
         (v_provider_user_id, 'plumber.rajesh@test.com', jsonb_build_object('full_name', 'Rajesh Kumar', 'initial_role', 'provider')),
         (v_unrelated_provider_id, 'electrician.suresh@test.com', jsonb_build_object('full_name', 'Suresh Gowda', 'initial_role', 'provider'));
 
-    -- Admin Bootstrap
+    -- Admin Bootstrap and MFA assurance gate.
     PERFORM set_config('request.jwt.claim.sub', v_admin_id::text, true);
+    PERFORM set_config('request.jwt.claims', pg_catalog.jsonb_build_object('sub', v_admin_id::text, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+    ASSERT public.is_admin() = false, 'Test 2 Failed: Admin access was granted to an AAL1 session';
     PERFORM set_config('request.jwt.claims', pg_catalog.jsonb_build_object('sub', v_admin_id::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
     PERFORM public.bootstrap_admin(v_admin_id);
+    ASSERT public.is_admin() = true, 'Test 2 Failed: Admin access was denied to an AAL2 session';
     ASSERT public.has_role(v_admin_id, 'admin') = true, 'Test 2 Failed: Admin role missing';
     ASSERT public.has_role(v_admin_id, 'super_admin') = true, 'Test 2 Failed: Super Admin role missing';
 
