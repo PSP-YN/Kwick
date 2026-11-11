@@ -15,6 +15,8 @@ const checks = [
   ['responsive viewport', /name="viewport"[^>]+width=device-width/.test(html)],
   ['description metadata', /name="description"/.test(html)],
   ['Open Graph metadata', /property="og:title"/.test(html) && /property="og:description"/.test(html)],
+  ['canonical URL', /rel="canonical" href="https:\/\/nexhelp-landing\.vercel\.app\//.test(html)],
+  ['Twitter card metadata', /name="twitter:card"/.test(html) && /name="twitter:title"/.test(html)],
   ['main landmark', /<main id="main">/.test(html)],
   ['skip navigation link', /class="skip-link" href="#main"/.test(html)],
   ['how it works section', /id="how-it-works"/.test(html)],
