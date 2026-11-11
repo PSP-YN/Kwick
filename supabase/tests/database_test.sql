@@ -138,6 +138,70 @@ BEGIN
     ASSERT (SELECT count(*) FROM public.order_events WHERE request_id = v_request_id AND event_type = 'request_created') = 1, 'Test 3 Failed: Order event not created';
     RAISE NOTICE '[PASS] Test 3: Customer service request created with audit trail';
 
+    -- Test 3b: Reject a pincode outside the selected service area.
+    v_failed := false;
+    BEGIN
+        PERFORM public.create_service_request(
+            p_category_id := v_cat_plumbing,
+            p_service_area_id := v_pilot_area,
+            p_description := 'Kitchen sink tap is leaking continuously',
+            p_address_line := 'Test address, Bengaluru',
+            p_pincode := '560034'
+        );
+    EXCEPTION WHEN SQLSTATE 'P0009' THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed, 'Test 3b Failed: Request accepted outside the selected service-area pincode';
+
+    -- Test 3c: Coordinates must be supplied as a complete latitude/longitude pair.
+    v_failed := false;
+    BEGIN
+        PERFORM public.create_service_request(
+            p_category_id := v_cat_plumbing,
+            p_service_area_id := v_pilot_area,
+            p_description := 'Kitchen sink tap is leaking continuously',
+            p_address_line := 'Test address, Bengaluru',
+            p_pincode := '560102',
+            p_latitude := 12.91
+        );
+    EXCEPTION WHEN SQLSTATE 'P0010' THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed, 'Test 3c Failed: Request accepted with only one coordinate';
+
+    -- Test 3d: Past appointments must be rejected by the database, not only the UI.
+    v_failed := false;
+    BEGIN
+        PERFORM public.create_service_request(
+            p_category_id := v_cat_plumbing,
+            p_service_area_id := v_pilot_area,
+            p_description := 'Kitchen sink tap is leaking continuously',
+            p_address_line := 'Test address, Bengaluru',
+            p_pincode := '560102',
+            p_scheduled_at := now() - interval '1 minute'
+        );
+    EXCEPTION WHEN SQLSTATE 'P0011' THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed, 'Test 3d Failed: Request accepted with a past appointment time';
+
+    -- Test 3e: A customer cannot attach another account's storage object to a request.
+    v_failed := false;
+    BEGIN
+        PERFORM public.create_service_request(
+            p_category_id := v_cat_plumbing,
+            p_service_area_id := v_pilot_area,
+            p_description := 'Kitchen sink tap is leaking continuously',
+            p_address_line := 'Test address, Bengaluru',
+            p_pincode := '560102',
+            p_photo_storage_path := v_customer_b_id::text || '/private-photo.jpg'
+        );
+    EXCEPTION WHEN SQLSTATE 'P0013' THEN
+        v_failed := true;
+    END;
+    ASSERT v_failed, 'Test 3e Failed: Request accepted a photo outside the current customer folder';
+    RAISE NOTICE '[PASS] Test 3b-3e: Service-area, coordinate, schedule, and photo ownership validation';
+
     -- ------------------------------------------------------------------------
     -- Test 4: Provider Onboarding & Unapproved Assignment Prevention
     -- ------------------------------------------------------------------------
