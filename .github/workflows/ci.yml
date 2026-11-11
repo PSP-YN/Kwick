@@ -2,9 +2,13 @@ name: NexHelp CI
 
 on:
   push:
-    branches: [ main, develop, 'hackglobal/**' ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
+
+concurrency:
+  group: nexhelp-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   flutter-validation:
