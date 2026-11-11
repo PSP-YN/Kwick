@@ -15,13 +15,13 @@
 ## 2. Provider Onboarding & Verification Procedures
 
 1. **Application Submission:**
-   - Provider signs up on mobile app, fills out experience, selects category (`plumbing` or `electrical`), and uploads ID proof and trade certificates.
+   - Provider signs up, fills out experience and selects category (`plumbing` or `electrical`). Mobile document upload is not yet implemented; the provider remains pending until an operator completes an approved secure manual verification process.
    - Initial status: `pending`. Provider cannot view requests or receive assignments.
 2. **Operator Document Review:**
    - Operator logs into Admin Dashboard (`/admin/providers`).
-   - Reviews uploaded documents in private storage, checks trade background, and verifies phone number.
+   - Reviews permitted identity and trade evidence through the approved secure process, checks trade background and verifies contact details. Do not routinely collect or retain full Aadhaar numbers or biometrics; offer an alternative identity document.
 3. **Approval / Rejection:**
-   - Operator triggers `admin_verify_provider(provider_id, 'approved', notes)`.
+   - Operator records verification evidence and triggers `admin_verify_provider(provider_id, 'approved', notes)`. Any UIDAI-based offline-verification workflow requires separate legal approval and applicable consent and safeguards.
    - Provider verification changes to `approved`.
    - Provider becomes eligible for manual job dispatch.
 
