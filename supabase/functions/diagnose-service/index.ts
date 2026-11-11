@@ -26,6 +26,16 @@ function corsHeaders(origin: string | null): Record<string, string> {
   return headers;
 }
 
+const aiConsentVersion = "2026-11-11-v1";
+
+function redactObviousIdentifiers(value: string): string {
+  return value
+    .replace(/\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b/gi, "[email redacted]")
+    .replace(/(?:\\+?91[\\s-]?)?[6-9]\\d{9}\\b/g, "[phone redacted]")
+    .replace(/\\b\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}\\b/g, "[government ID redacted]")
+    .replace(/\\b[A-Z]{5}\\d{4}[A-Z]\\b/gi, "[government ID redacted]");
+}
+
 const allowedCategories = ["plumbing", "electrical", "other"] as const;
 const allowedUrgencies = ["routine", "soon", "urgent", "emergency"] as const;
 const allowedConfidence = ["low", "medium", "high"] as const;
@@ -92,6 +102,9 @@ Deno.serve(async (request) => {
   if (!geminiApiKey) {
     return json(503, { error: "AI diagnosis is not enabled yet. Configure the GEMINI_API_KEY secret." });
   }
+  if (Deno.env.get("GEMINI_PAID_TIER_CONFIRMED") !== "true") {
+    return json(503, { error: "AI triage is disabled until the production Gemini paid tier is verified. You can still submit your service request without AI." });
+  }
 
   let payload: Record<string, unknown>;
   try {
@@ -100,6 +113,9 @@ Deno.serve(async (request) => {
     return json(400, { error: "Request body must be valid JSON." });
   }
 
+  if (payload.aiConsent !== true || payload.aiConsentVersion !== aiConsentVersion) {
+    return json(400, { error: "Explicit, current consent is required before sending an issue to Google Gemini." });
+  }
   if (payload.description !== undefined && typeof payload.description !== "string") {
     return json(400, { error: "Issue description must be text." });
   }
@@ -113,6 +129,10 @@ Deno.serve(async (request) => {
   }
   if (description.length > 2000) {
     return json(413, { error: "Issue description must be 2000 characters or fewer." });
+  }
+  const sanitizedDescription = redactObviousIdentifiers(description);
+  if (sanitizedDescription.length < 10) {
+    return json(400, { error: "Remove personal details and describe only the service issue." });
   }
   if (categoryHint && !allowedCategories.includes(categoryHint as typeof allowedCategories[number])) {
     return json(400, { error: "Unsupported service category hint." });
@@ -150,7 +170,7 @@ Deno.serve(async (request) => {
     "Safety alerts must be short, conservative, and tell the customer to keep away from hazards and contact local emergency services or the relevant utility when appropriate.",
     "Ask up to three useful follow-up questions. Keep the summary factual and explicitly uncertain when evidence is limited.",
     categoryHint ? `User-selected category hint: ${categoryHint}.` : "No category has been selected yet.",
-    `Customer issue description: """${description}"""`,
+    `Customer issue description (obvious identifiers redacted): """${sanitizedDescription}"""`,
   ].join("\n");
 
   const schema = {
