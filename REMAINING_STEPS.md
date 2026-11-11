@@ -1,193 +1,155 @@
-# NexHelp — Remaining User Action Items & Production Launch Checklist
+# NexHelp — Remaining Work & Production Launch Checklist
 
-> **Purpose:** This checklist records external production setup and release tasks. It is not a claim that every feature has been independently verified. Review the latest CI results and the engineering audit before treating NexHelp as production-ready.
+> **Status:** The public landing page is deployed. The mobile app, database, AI function, and operations console are not yet a live customer service. A successful CI build does not by itself authorize a public pilot.
 
----
+## Current status
 
-## Quick Reference Summary
+- Public landing page: [https://nexhelp-landing.vercel.app/](https://nexhelp-landing.vercel.app/)
+- Repository: [PSP-YN/NexHelp](https://github.com/PSP-YN/NexHelp)
+- Working branch: `hackglobal/nexhelp-intelligence`
+- Draft PR: [#2](https://github.com/PSP-YN/NexHelp/pull/2)
+- Backend: **Not provisioned.** Supabase rejected the $0/month NexHelp project creation because the organization reached its two-project free-tier limit. CareerOS is inactive and JanaSetu is active. Neither project was deleted or upgraded.
+- Android: CI has compiled a debug APK on an earlier commit. The current CI workflow is configured to upload a debug APK artifact after its run completes. This is a test build, not a signed production release.
+- Android production release: A gated workflow exists at `.github/workflows/android-release.yml`; it requires a dedicated Supabase project and private Android signing secrets.
+- Operations console: Build passes in an earlier completed CI run, but it is not deployed or connected to a live NexHelp backend.
+- iOS: Not compiled or signed by the current CI pipeline.
+- Provider document upload: Not implemented in mobile onboarding. The pilot must use a secure, documented manual verification process before provider approval.
 
-| # | Action Item | Target Service | Est. Time |
-| :--- | :--- | :--- | :--- |
-| **1** | [Create Supabase Project & Push Migrations](#1-create-supabase-project--push-migrations) | Supabase Cloud (`ap-south-1`) | 10 mins |
-| **2** | [Bootstrap the First Admin User](#2-bootstrap-the-first-admin-user) | Supabase SQL Editor | 2 mins |
-| **3** | [Configure Indian SMS Gateway (OTP)](#3-configure-indian-sms-gateway-otp) | Twilio / MSG91 / Exotel | 15 mins |
-| **4** | [Deploy Operations Dashboard](#4-deploy-operations-dashboard) | Vercel / Cloudflare Pages | 5 mins |
-| **5** | [Create Android Release Keystore](#5-create-android-release-keystore) | Local Terminal | 5 mins |
-| **6** | [Build Production Android App Bundle (`.aab`)](#6-build-production-android-app-bundle-aab) | Local Terminal | 5 mins |
-| **7** | [Submit to Google Play Console](#7-submit-to-google-play-console) | Google Play Console | 30 mins |
-| **8** | [Build iOS App via GitHub Actions](#8-build-ios-app-via-github-actions) | GitHub Actions (macOS) | 15 mins |
-| **9** | [Onboard Initial Pilot Partners (560102)](#9-onboard-initial-pilot-partners-560102) | NexHelp Admin Portal | On-demand |
+## 1. Resolve the Supabase project limit
 
----
+A dedicated NexHelp project is required. Create it in `ap-south-1` (Mumbai) under the selected Supabase organization.
 
-## 1. Create Supabase Project & Push Migrations
+The $0/month project creation was explicitly approved, but Supabase refused because the organization has reached its free-project limit. To proceed, choose one of these actions in Supabase:
+- Delete the inactive CareerOS project (destructive; do this only if its data is no longer needed).
+- Upgrade an existing project or organization plan to a tier that permits another project (may incur recurring cost).
 
-1. Go to [supabase.com](https://supabase.com) and create a new project (e.g. `nexhelp-prod`).
-2. Select Region: **`ap-south-1` (Mumbai, India)** for lowest latency in Bengaluru.
-3. Save your database password and retrieve your:
-   - **Project URL:** `https://<project-ref>.supabase.co`
-   - **Anon / Public Key:** `eyJhbGci...`
-4. From your terminal in `/home/psp/projects/NexHelp`:
+Do not reuse JanaSetu or CareerOS for NexHelp. Do not delete or upgrade either without a separate explicit decision.
+
+Once the project exists:
+1. Save the project URL, project reference, database password, and public anon/publishable key securely.
+2. From the repository root, run:
    ```bash
-   # Login to your Supabase CLI account
    supabase login
-
-   # Link to your remote project
-   supabase link --project-ref <your-project-ref>
-
-   # Push all 10 migrations to production PostgreSQL
+   supabase link --project-ref <nexhelp-project-ref>
    supabase db push
    ```
-5. Verify in Supabase Dashboard:
-   - All 15 tables appear under **Table Editor** with `RLS Enabled`.
-   - The two private buckets (`provider-documents`, `service-request-photos`) appear under **Storage**.
+3. Apply all 10 ordered migrations.
+4. Verify all application tables have RLS enabled, both private storage buckets exist, and the restricted quota RPC is executable only by `service_role`.
+5. Run Supabase database advisors and resolve warnings before real user data is introduced.
 
----
+## 2. Configure authentication and storage
 
-## 2. Bootstrap the First Admin User
+The current mobile authentication flow uses email/password. Registration also collects a phone number as profile information; SMS OTP is **not** the current sign-in flow.
 
-To gain access to the **Operations Console** (`admin/`):
+Before pilot:
+- Configure production email delivery, confirmation, recovery, redirect URLs, password policy, and abuse/rate limits.
+- Test fresh registration, confirmation, sign-in, sign-out, session refresh, and password recovery.
+- Keep `provider-documents` and `service-request-photos` private.
+- Test upload/read/signed URL expiry and cross-user access denial with separate customer, provider, and admin accounts.
+- Do not store identity or trade documents in public buckets.
 
-1. Sign up a new user account with your email or phone number in Supabase (or via the NexHelp app).
-2. Go to **Supabase Dashboard $\to$ Authentication $\to$ Users** and copy your `User UID` (a UUID like `e7f2c610-...`).
-3. Open **SQL Editor** in Supabase Dashboard and run:
-   ```sql
-   -- Grants the user the admin role and logs to admin_audit_logs
-   SELECT public.bootstrap_admin('PASTE_YOUR_USER_UUID_HERE');
-   ```
-4. Confirm by running:
-   ```sql
-   SELECT u.full_name, r.role
-   FROM public.user_roles r
-   JOIN public.profiles u ON u.id = r.user_id
-   WHERE r.user_id = 'PASTE_YOUR_USER_UUID_HERE';
-   ```
-   It should return role `admin`.
+## 3. Deploy NexHelp Intelligence
 
----
-
-## 3. Configure Indian SMS Gateway (OTP)
-
-NexHelp authenticates Indian mobile numbers (+91). For production SMS OTP:
-
-1. In Supabase Dashboard, go to **Authentication $\to$ Providers $\to$ Phone**.
-2. Enable **Phone Provider**.
-3. Choose your SMS vendor:
-   - **Twilio / MSG91 / Exotel**: Enter Account SID, Auth Token, and Sender ID.
-   - For India, ensure your SMS template is registered on DLT with template: `Your NexHelp verification code is {{ .Code }}. Valid for 5 minutes.`
-4. Set OTP Expiry to **300 seconds (5 minutes)**.
-
-*(For testing prior to SMS setup, you can add Test Phone Numbers in Supabase Dashboard $\to$ Authentication $\to$ Providers $\to$ Phone $\to$ "Phone numbers for testing" with fixed OTP codes like `123456`).*
-
----
-
-## 4. Deploy Operations Dashboard
-
-Deploy the protected internal Next.js console (`admin/`) to Vercel or Cloudflare:
-
-1. Go to [vercel.com](https://vercel.com) $\to$ **Add New Project**.
-2. Import repository `PSP-YN/NexHelp`.
-3. Configure project settings:
-   - **Root Directory:** Click Edit and select `admin`.
-   - **Framework Preset:** Next.js.
-4. Add Environment Variables:
-   - `NEXT_PUBLIC_SUPABASE_URL`: `https://<your-project-ref>.supabase.co`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: `<your-production-anon-key>`
-5. Click **Deploy**.
-6. Open your deployment URL (e.g., `https://nexhelp-ops.vercel.app`) to access the Operations Console.
-
----
-
-## 5. Create Android Release Keystore
-
-Generate an official upload key for the Google Play Store:
-
-1. In your terminal, run:
-   ```bash
-   keytool -genkey -v -keystore android/app/upload-keystore.jks \
-     -alias nexhelp-upload \
-     -keyalg RSA \
-     -keysize 2048 \
-     -validity 10000
-   ```
-2. Store the password safely in your password manager.
-3. Create `android/key.properties` (this file is git-ignored for security):
-   ```properties
-   storePassword=YOUR_KEYSTORE_PASSWORD
-   keyPassword=YOUR_KEY_PASSWORD
-   keyAlias=nexhelp-upload
-   storeFile=upload-keystore.jks
-   ```
-
----
-
-## 6. Build Production Android App Bundle (`.aab`)
-
-Build the release bundle pointing to your live Supabase instance:
+Set the Gemini key only as a Supabase Edge Function secret:
 
 ```bash
-flutter build appbundle --release \
-  --dart-define=SUPABASE_URL=https://<your-project-ref>.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=<your-production-anon-key>
+supabase secrets set GEMINI_API_KEY=<secret>
+supabase secrets set GEMINI_MODEL=<supported-model-id>
+supabase functions deploy diagnose-service
 ```
 
-- Output path: `build/app/outputs/bundle/release/app-release.aab`
-- Size: ~18–25 MB (optimized release).
+Verify the configured model against the current Gemini API account. Test authentication, invalid payloads, model errors, rate-limit exhaustion, timeout behavior, safety alerts, and the non-AI booking fallback. Never expose the Gemini key in the mobile app, browser, GitHub, or any `NEXT_PUBLIC_*` variable.
+
+## 4. Deploy the operations console
+
+Create a separate Vercel project for repository `PSP-YN/NexHelp` with root directory `admin`.
+
+Set:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<nexhelp-project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<public-anon-or-publishable-key>
+```
+
+Then:
+- Deploy and verify unauthenticated visitors cannot access operations data.
+- Bootstrap only the designated first admin through the restricted database procedure.
+- Test provider review, dispatch, status transitions, dispute handling, and audit logging against live data.
+- Verify all admin-only RPCs reject ordinary authenticated users.
+
+The admin console is not live until this deployment and these checks are complete.
+
+## 5. Prepare Android production signing
+
+Generate a dedicated upload keystore and keep a secure backup:
+
+```bash
+keytool -genkey -v -keystore android/app/upload-keystore.jks \
+  -alias nexhelp-upload -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Copy `android/key.properties.example` to `android/key.properties` and enter the alias, keystore path, and passwords. Both files containing private signing material are excluded from Git.
+
+The signed release workflow requires these GitHub Actions secrets:
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+
+After the backend and signing secrets are ready, run the `Android Release` workflow manually or push a `v*` tag. It runs formatting, analysis, Flutter tests, builds a signed APK and AAB, and uploads artifacts.
+
+**Do not submit the ordinary CI debug APK to Google Play.** It is only for development/device testing.
+
+## 6. Android device acceptance
+
+Before releasing a signed build, test on physical Android devices:
+- Fresh install, upgrade install, and relaunch.
+- Registration, email confirmation, sign-in, recovery, and session expiry.
+- Customer booking, validation, duplicate submission, cancellation, and history.
+- AI unavailable, quota exhausted, invalid response, and safety alert behavior.
+- Provider onboarding, pending review, approval/rejection, availability, and assignment lifecycle.
+- Offline/slow network, retry behavior, keyboard handling, text scaling, and TalkBack accessibility.
+
+## 7. iOS release
+
+The current CI workflow does not build or sign iOS. Add a macOS/Xcode workflow, configure Apple Developer signing certificates and provisioning profiles, then test installation and the same core workflows before calling iOS release-ready.
+
+## 8. Provider onboarding and pilot operations
+
+The current provider onboarding flow collects trade and experience details but does not upload identity or trade documents.
+
+For the initial Bengaluru South pilot:
+1. Define a documented checklist for identity, trade competence, contact details, and service-area eligibility.
+2. Collect and inspect evidence through an approved secure process.
+3. Record the verification outcome and audit notes in the operations console.
+4. Approve a provider only after checks are complete.
+5. Confirm provider availability and service-area eligibility before assignment.
+6. Staff a support and dispute escalation path before accepting customer bookings.
+
+Do not present self-declared provider details as verified evidence.
+
+## 9. Legal, privacy, and launch operations
+
+Before opening the service to the public:
+- Publish an accurate privacy policy and terms of service reviewed by the project owner/legal adviser.
+- Document data purposes, retention, deletion, processor/subprocessor handling, user rights, and breach response.
+- Confirm user consent and disclosures for AI-assisted triage.
+- Define customer support, refunds/disputes, provider conduct, and incident escalation.
+- Verify all claims on the landing page match actual service readiness and available coverage.
+- Confirm the pilot area and service categories with the operations owner.
+
+## 10. Google Play submission
+
+After the signed AAB and legal documents are ready:
+1. Create the app in [Google Play Console](https://play.google.com/console).
+2. Use the final app name, package ID `com.nexhelp.nexhelp`, and version/build number.
+3. Complete store listing, content rating, target audience, data safety, privacy policy, and app access declarations accurately.
+4. Upload the signed AAB to internal testing.
+5. Test the release with real accounts and a production-like backend before staged rollout.
 
 ---
 
-## 7. Submit to Google Play Console
+## Go-live gate
 
-1. Log in to [play.google.com/console](https://play.google.com/console).
-2. Create App:
-   - **App Name:** `NexHelp - Home Services`
-   - **Default Language:** English (India)
-   - **Category:** House & Home / Business
-3. Upload `build/app/outputs/bundle/release/app-release.aab` to **Internal Testing** or **Closed Testing**.
-4. Set App Content:
-   - Privacy Policy URL (point to your deployed policy or website).
-   - Target Audience: 18+.
-   - Declarations: Location / Storage for service photos.
-5. Release the pilot to testers in Bengaluru.
-
----
-
-## 8. Build iOS App via GitHub Actions
-
-Because this development workstation runs Linux Fedora, macOS/Xcode is not local. iOS builds are built via CI:
-
-1. In your GitHub repository (`PSP-YN/NexHelp`), go to **Settings $\to$ Secrets and variables $\to$ Actions**.
-2. Add the following repository secrets:
-   - `SUPABASE_URL`: `https://<your-project-ref>.supabase.co`
-   - `SUPABASE_ANON_KEY`: `<your-production-anon-key>`
-3. The included GitHub Actions workflow `.github/workflows/ci.yml` validates builds on push.
-4. For TestFlight distribution, add Apple Developer Team ID and Certificates to GitHub Secrets.
-
----
-
-## 9. Onboard Initial Pilot Partners (560102)
-
-For the initial launch in Bengaluru South (HSR Layout & Koramangala 560102):
-
-1. Have 5–10 trusted plumbers and electricians download the app and sign up as **Partner**.
-2. During onboarding, they select **Plumbing** or **Electrical** and input experience years.
-3. **Important current limitation:** The mobile onboarding flow does not yet include in-app ID/trade-document upload. For this pilot, collect and inspect identity/trade evidence through a secure, documented offline process before approval. Do not ask providers to upload sensitive identity documents through chat or an unapproved channel.
-4. Open the **Operations Console** (`/admin` → **Provider Verifications** tab).
-5. Review the evidence through the approved offline process and enter the verification outcome and audit notes in the console.
-6. Click **Approve Partner** only after the required checks are complete.
-7. Once approved, partners toggle their status to **Available** and can receive customer booking dispatches.
-
----
-
-*This document is the single source of truth for all remaining manual human steps. Remaining engineering work and test status must be checked against the latest branch CI and audit notes before launch.*
-
-
-## Current engineering status
-
-- The HackGlobal upgrade is isolated on `hackglobal/nexhelp-intelligence`; `main` has not been modified by this work.
-- The branch includes AI triage, trust-aware dispatch, additional database hardening, operations-console fixes, and HackGlobal submission assets.
-- Review the latest GitHub Actions run for the exact branch head before treating Flutter, database, admin, or Edge Function checks as passing.
-- A dedicated NexHelp Supabase project is not configured yet. Do not reuse the existing CareerOS or JanaSetu projects.
-- Gemini live calls are not verified until the Edge Function is deployed to the dedicated project with a server-side `GEMINI_API_KEY`.
-- AI usage quotas now use an atomic per-user reservation RPC; validate this migration in the dedicated cloud project before launch.
-- In-app provider document upload remains future work; the pilot requires documented manual verification.
+NexHelp is not production-ready as a full service until the dedicated Supabase project is provisioned, migrations and RLS are verified in the cloud, the AI and operations services are deployed, provider verification/support are staffed, a signed Android release passes physical-device acceptance, and privacy/terms are published. Keep the draft PR unmerged until current CI checks are green and the production blockers are resolved.
