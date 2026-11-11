@@ -2,7 +2,7 @@
 
 ## 1. Release scope and current boundaries
 
-- **Planned pilot:** HSR Layout and Koramangala, Bengaluru South (560102).
+- **Planned pilot:** The configured 560102 service zone (HSR Layout focus). Koramangala remains out of scope until separately configured.
 - **Initial trades:** Plumbing and electrical.
 - **Mobile:** Flutter Android app; iOS project files exist but this repository's current CI does not compile an iOS binary.
 - **Backend:** Supabase PostgreSQL 17, Auth, private Storage, and the optional diagnosis Edge Function.
@@ -26,7 +26,7 @@ From the repository root:
 ```bash
 supabase login
 supabase link --project-ref <nexhelp-project-ref>
-supabase db push
+supabase db push --yes --remote
 ```
 
 The repository currently contains 10 ordered migrations. After deployment, verify:
@@ -51,9 +51,9 @@ Keep both storage buckets private. Verify upload, read, signed URL expiry, and u
 Set the Gemini secret server-side only:
 
 ```bash
-supabase secrets set GEMINI_API_KEY=<secret>
-supabase secrets set GEMINI_MODEL=<supported-model-id>
-supabase functions deploy diagnose-service
+supabase secrets set GEMINI_API_KEY=<secret> --yes
+supabase secrets set GEMINI_MODEL=<supported-model-id> --yes
+supabase functions deploy diagnose-service --yes
 ```
 
 Use a model identifier confirmed against the current Gemini API account. Do not put the Gemini key in Flutter, Next.js public environment variables, GitHub source, or the landing page. Test quota enforcement, invalid output handling, timeout behavior, and the no-AI booking path.
