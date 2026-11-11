@@ -30,6 +30,7 @@ const checks = [
   ['local script exists', existsSync(resolve(directory, 'app.js'))],
   ['favicon exists', existsSync(resolve(directory, 'favicon.svg'))],
   ['crawler policy exists', existsSync(resolve(directory, 'robots.txt'))],
+  ['sitemap exists', existsSync(resolve(directory, 'sitemap.xml'))],
   ['Content Security Policy configured', headerValue('Content-Security-Policy').includes("default-src 'self'")],
   ['anti-sniffing header configured', headerValue('X-Content-Type-Options') === 'nosniff'],
   ['referrer policy configured', headerValue('Referrer-Policy') === 'strict-origin-when-cross-origin'],
