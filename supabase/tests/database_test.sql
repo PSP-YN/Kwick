@@ -62,6 +62,7 @@ COMMIT;
 \i supabase/migrations/20261111000008_ai_diagnosis_usage.sql
 \i supabase/migrations/20261111000009_harden_definer_helpers.sql
 \i supabase/migrations/20261111000010_atomic_ai_quota.sql
+\i supabase/migrations/20261111000011_validate_booking_inputs.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
