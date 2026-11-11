@@ -57,7 +57,10 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
   Future<void> _analyzeIssue() async {
     if (!_aiConsentGiven) {
-      setState(() => _diagnosisError = 'Consent is required for optional AI triage. You can also continue without AI.');
+      setState(
+        () => _diagnosisError =
+            'Consent is required for optional AI triage. You can also continue without AI.',
+      );
       return;
     }
     final description = _descriptionController.text.trim();
@@ -241,7 +244,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         if (selectedDateTime.isBefore(DateTime.now())) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Choose a future appointment time.')),
+              const SnackBar(
+                content: Text('Choose a future appointment time.'),
+              ),
             );
           }
           return;
@@ -277,8 +282,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   return alert.length > 100 ? alert.substring(0, 100) : alert;
                 })
                 .join('; ');
-        final rawDispatcherNote =
-            (_diagnosis!['dispatcher_note'] ?? '').toString().trim();
+        final rawDispatcherNote = (_diagnosis!['dispatcher_note'] ?? '')
+            .toString()
+            .trim();
         final dispatcherNote = rawDispatcherNote.length > 200
             ? rawDispatcherNote.substring(0, 200)
             : rawDispatcherNote;
@@ -488,7 +494,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   maxLines: 3,
                   validator: Validators.validateDescription,
                   onChanged: (_) {
-                    if (_diagnosis != null || _diagnosisError != null || _aiConsentGiven) {
+                    if (_diagnosis != null ||
+                        _diagnosisError != null ||
+                        _aiConsentGiven) {
                       setState(() {
                         _aiConsentGiven = false;
                         _diagnosis = null;
@@ -636,7 +644,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   controller: _notesController,
                   maxLines: 2,
                   validator: (value) =>
-                      value != null && value.trim().length > AppConfig.maxNotesLength
+                      value != null &&
+                          value.trim().length > AppConfig.maxNotesLength
                       ? 'Notes cannot exceed ${AppConfig.maxNotesLength} characters.'
                       : null,
                 ),

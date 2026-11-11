@@ -22,15 +22,19 @@ class AppConfig {
   /// Accepts HTTPS hosted projects in every build and local emulator URLs only
   /// in debug/profile builds. CI placeholders and dummy keys are always rejected.
   static bool get hasValidSupabaseConfig {
-    final isHttpsProjectUrl = supabaseUrl.startsWith('https://') &&
+    final isHttpsProjectUrl =
+        supabaseUrl.startsWith('https://') &&
         supabaseUrl.endsWith('.supabase.co');
-    final isLocalDevelopmentUrl = !kReleaseMode &&
+    final isLocalDevelopmentUrl =
+        !kReleaseMode &&
         !kProfileMode &&
         (supabaseUrl == 'http://10.0.2.2:54321' ||
             supabaseUrl == 'http://127.0.0.1:54321');
-    final hasPublicKey = supabaseAnonKey.startsWith('eyJ') ||
+    final hasPublicKey =
+        supabaseAnonKey.startsWith('eyJ') ||
         supabaseAnonKey.startsWith('sb_publishable_');
-    final isKnownPlaceholder = supabaseAnonKey.contains('dummy_') ||
+    final isKnownPlaceholder =
+        supabaseAnonKey.contains('dummy_') ||
         supabaseAnonKey == 'ci-placeholder';
 
     return (isHttpsProjectUrl || isLocalDevelopmentUrl) &&

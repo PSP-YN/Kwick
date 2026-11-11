@@ -16,9 +16,16 @@ CREATE TABLE IF NOT EXISTS auth.users (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Mock auth.uid() function for session simulation
+-- Mock Supabase Auth helpers for session simulation outside the hosted platform.
 CREATE OR REPLACE FUNCTION auth.uid() RETURNS UUID AS $$
-    SELECT current_setting('request.jwt.claim.sub', true)::UUID;
+    SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::UUID;
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION auth.jwt() RETURNS JSONB AS $$
+    SELECT COALESCE(
+        NULLIF(current_setting('request.jwt.claims', true), ''),
+        '{}'
+    )::JSONB;
 $$ LANGUAGE sql STABLE;
 
 CREATE SCHEMA IF NOT EXISTS storage;
