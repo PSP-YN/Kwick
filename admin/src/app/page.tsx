@@ -128,10 +128,10 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
                       <MapPin className="w-5 h-5 text-emerald-300" />
-                      <h2 className="text-lg font-bold">Bengaluru South Pilot Region (560102)</h2>
+                      <h2 className="text-lg font-bold">560102 Service Zone (HSR Layout Focus)</h2>
                     </div>
                     <p className="text-xs text-emerald-100 max-w-xl">
-                      Authoritative single-zone pilot for HSR Layout and Koramangala. Strict partial unique indexes prevent double-booking. Financial amounts recorded in integer paise.
+                      Single-pincode pilot zone. Koramangala remains out of scope until its service area and provider coverage are configured. Database constraints prevent overlapping active assignments. Financial amounts are stored in integer paise.
                     </p>
                   </div>
                   <div className="flex items-center space-x-3 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-xs">
@@ -275,7 +275,7 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
       {/* Footer */}
       <footer className="border-t border-zinc-200 bg-white py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center text-xs text-zinc-500">
-          NexHelp Operations Platform • Bengaluru South Pilot • PostgreSQL 16 + RLS • Built for Production
+          NexHelp Operations Platform • 560102 Pilot Zone • PostgreSQL 17 + RLS • Pre-launch
         </div>
       </footer>
     </div>
