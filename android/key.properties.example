@@ -1,0 +1,6 @@
+# Copy to android/key.properties and replace each value.
+# Keep key.properties and the referenced keystore out of version control.
+storePassword=REPLACE_WITH_UPLOAD_KEYSTORE_PASSWORD
+keyPassword=REPLACE_WITH_UPLOAD_KEY_PASSWORD
+keyAlias=nexhelp-upload
+storeFile=upload-keystore.jks
