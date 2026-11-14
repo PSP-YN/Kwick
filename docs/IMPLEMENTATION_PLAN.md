@@ -1,6 +1,6 @@
-# NexHelp Implementation Plan
+# Kwick Implementation Plan
 
-This document tracks all phases, tasks, completion status, and verification evidence for NexHelp.
+This document tracks all phases, tasks, completion status, and verification evidence for Kwick.
 
 ---
 

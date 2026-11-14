@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NexHelp Operations",
-  description: "Secure operations console for the NexHelp home-services marketplace.",
+  title: "Kwick Operations",
+  description: "Secure operations console for the Kwick home-services marketplace.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

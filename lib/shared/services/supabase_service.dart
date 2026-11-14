@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/errors/failures.dart';
 import '../models/assignment.dart';
 import '../models/provider_profile.dart';
@@ -300,7 +303,7 @@ class SupabaseService {
     }
   }
 
-  Future<void> submitProviderOnboarding({
+  Future<String> submitProviderOnboarding({
     required String userId,
     required String categoryId,
     required String serviceAreaId,
@@ -327,8 +330,150 @@ class SupabaseService {
         'category_id': categoryId,
         'is_active': true,
       });
+      return providerId;
     } catch (e) {
       throw ServerFailure('Failed to submit provider onboarding: $e');
+    }
+  }
+
+  Future<void> uploadProviderDocument({
+    required String providerId,
+    required String documentType,
+    required String fileName,
+    required Uint8List bytes,
+    required String contentType,
+  }) async {
+    final user = currentUser;
+    if (user == null) {
+      throw const AuthFailure('Sign in to upload verification documents.');
+    }
+    if (!const {
+      'id_proof',
+      'trade_certification',
+      'address_proof',
+      'police_clearance',
+    }.contains(documentType)) {
+      throw const ValidationFailure('Unsupported verification document type.');
+    }
+    if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
+      throw const ValidationFailure(
+        'Choose a non-empty file smaller than 10 MB.',
+      );
+    }
+    if (!const {
+      'image/jpeg',
+      'image/png',
+      'application/pdf',
+    }.contains(contentType)) {
+      throw const ValidationFailure('Upload a JPG, PNG or PDF document.');
+    }
+
+    final extension = fileName.contains('.')
+        ? fileName.split('.').last.toLowerCase()
+        : 'bin';
+    final objectPath =
+        '${user.id}/$providerId/${documentType}_${const Uuid().v4()}.$extension';
+    try {
+      await client.storage
+          .from('provider-documents')
+          .uploadBinary(
+            objectPath,
+            bytes,
+            fileOptions: FileOptions(contentType: contentType, upsert: false),
+          );
+      try {
+        await client.from('provider_documents').insert({
+          'provider_id': providerId,
+          'document_type': documentType,
+          'storage_path': objectPath,
+          'verification_status': 'pending',
+        });
+      } catch (_) {
+        await client.storage.from('provider-documents').remove([objectPath]);
+        rethrow;
+      }
+    } on PostgrestException catch (e) {
+      throw ServerFailure(e.message, code: e.code);
+    } catch (e) {
+      throw ServerFailure('Verification document upload failed: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getProviderDocuments(
+    String providerId,
+  ) async {
+    try {
+      final rows = await client
+          .from('provider_documents')
+          .select('id, document_type, verification_status, created_at')
+          .eq('provider_id', providerId)
+          .order('created_at', ascending: false);
+      return (rows as List).cast<Map<String, dynamic>>();
+    } catch (e) {
+      throw ServerFailure('Could not load verification documents: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getProviderServices(
+    String providerId,
+  ) async {
+    try {
+      final rows = await client
+          .from('provider_services')
+          .select(
+            'id, provider_id, category_id, is_active, base_price_minor, pricing_model, price_approval_status, service_categories(name)',
+          )
+          .eq('provider_id', providerId)
+          .order('created_at', ascending: true);
+      return (rows as List).cast<Map<String, dynamic>>();
+    } catch (e) {
+      throw ServerFailure('Could not load your service pricing: $e');
+    }
+  }
+
+  Future<void> updateProviderServicePricing({
+    required String providerServiceId,
+    required String pricingModel,
+    required int? basePriceMinor,
+  }) async {
+    if (!const {'provider_quote', 'agreed_fixed'}.contains(pricingModel)) {
+      throw const ValidationFailure('Choose a supported pricing model.');
+    }
+    if (pricingModel == 'agreed_fixed' &&
+        (basePriceMinor == null || basePriceMinor <= 0)) {
+      throw const ValidationFailure('Enter a fixed price greater than zero.');
+    }
+    try {
+      await client
+          .from('provider_services')
+          .update({
+            'pricing_model': pricingModel,
+            'base_price_minor': pricingModel == 'agreed_fixed'
+                ? basePriceMinor
+                : null,
+          })
+          .eq('id', providerServiceId);
+    } on PostgrestException catch (e) {
+      throw ServerFailure(e.message, code: e.code);
+    } catch (e) {
+      throw ServerFailure('Could not update service pricing: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>?> getActiveCommissionTerm({
+    required String providerId,
+    required String categoryId,
+  }) async {
+    try {
+      return await client
+          .from('provider_commission_terms')
+          .select('commission_rate_bps, effective_from, provider_agreed_at')
+          .eq('provider_id', providerId)
+          .eq('category_id', categoryId)
+          .eq('status', 'active')
+          .maybeSingle();
+    } catch (e) {
+      throw ServerFailure('Could not load agreed platform terms: $e');
     }
   }
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexhelp/core/utilities/currency_formatter.dart';
+import 'package:kwick/core/utilities/currency_formatter.dart';
 
 void main() {
   group('CurrencyFormatter', () {

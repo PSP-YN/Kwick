@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexhelp/shared/widgets/confirmation_dialog.dart';
-import 'package:nexhelp/shared/widgets/primary_button.dart';
+import 'package:kwick/shared/widgets/confirmation_dialog.dart';
+import 'package:kwick/shared/widgets/primary_button.dart';
 
 void main() {
   group('PrimaryButton Widget Tests', () {

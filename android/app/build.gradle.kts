@@ -14,7 +14,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.nexhelp.nexhelp"
+    namespace = "com.kwick.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -24,12 +24,27 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.nexhelp.nexhelp"
+        applicationId = "com.kwick.customer"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         manifestPlaceholders["usesCleartextTraffic"] = "false"
+        manifestPlaceholders["appLabel"] = "Kwick"
+    }
+
+    flavorDimensions += "audience"
+    productFlavors {
+        create("customer") {
+            dimension = "audience"
+            applicationId = "com.kwick.customer"
+            manifestPlaceholders["appLabel"] = "Kwick"
+        }
+        create("provider") {
+            dimension = "audience"
+            applicationId = "com.kwick.provider"
+            manifestPlaceholders["appLabel"] = "Kwick Partner"
+        }
     }
 
     signingConfigs {

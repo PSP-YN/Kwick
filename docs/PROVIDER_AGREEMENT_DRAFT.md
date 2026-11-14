@@ -1,4 +1,4 @@
-# NexHelp Service Provider Agreement — Draft for Legal Review
+# Kwick Service Provider Agreement — Draft for Legal Review
 
 **DRAFT — NOT APPROVED FOR SIGNATURE.** Have Indian counsel review the actual marketplace model, provider classification, labour/social-security implications, insurance, GST and liability allocation.
 
@@ -10,11 +10,11 @@
 
 ## 1. Scope and status
 
-The provider may receive service requests through NexHelp and, after accepting an offer, perform the agreed work for the customer. The legal relationship and classification must be determined from actual working practices, not merely this agreement. Nothing here authorizes work requiring a licence, permit or qualification the provider does not hold.
+The provider may receive service requests through Kwick and, after accepting an offer, perform the agreed work for the customer. The legal relationship and classification must be determined from actual working practices, not merely this agreement. Nothing here authorizes work requiring a licence, permit or qualification the provider does not hold.
 
 ## 2. Eligibility and verification
 
-Before activation, NexHelp may verify identity, contact details, experience, trade competence, service area and any applicable licence/credential. The provider must supply accurate documents and notify NexHelp of expiry, suspension, change or loss of qualification. NexHelp may suspend dispatch while verification is incomplete or under review.
+Before activation, Kwick may verify identity, contact details, experience, trade competence, service area and any applicable licence/credential. The provider must supply accurate documents and notify Kwick of expiry, suspension, change or loss of qualification. Kwick may suspend dispatch while verification is incomplete or under review.
 
 Do not request or retain full Aadhaar numbers, Aadhaar biometrics or Aadhaar e-KYC payloads as a routine verification step. Offer an alternative permitted identity document. Any UIDAI-based offline-verification process requires separate legal review, appropriate consent and compliance with UIDAI rules.
 
@@ -37,7 +37,7 @@ A request is not assigned until the provider accepts the offer through the autho
 
 ## 5. Pricing, invoices and tax
 
-The provider must communicate a clear quote before work starts, issue invoices/receipts where required, state applicable taxes and provide accurate tax information. Commission, settlement, withholding, GST TCS and payment terms must be inserted only after tax counsel approves the operating model. NexHelp currently does not collect or settle payments.
+The provider must communicate a clear quote before work starts, issue invoices/receipts where required, state applicable taxes and provide accurate tax information. Commission, settlement, withholding, GST TCS and payment terms must be inserted only after tax counsel approves the operating model. Kwick currently does not collect or settle payments.
 
 ## 6. Customer data and confidentiality
 
@@ -49,11 +49,11 @@ Use customer name, phone, address, photos and service details only to fulfil the
 
 ## 8. Complaints, suspension and termination
 
-The provider must cooperate with reasonable investigations and provide truthful information. NexHelp may temporarily pause assignments while investigating a safety, identity, fraud or conduct concern. The final agreement must define evidence review, response opportunity, appeal, termination and post-termination data handling.
+The provider must cooperate with reasonable investigations and provide truthful information. Kwick may temporarily pause assignments while investigating a safety, identity, fraud or conduct concern. The final agreement must define evidence review, response opportunity, appeal, termination and post-termination data handling.
 
 ## 9. Signatures
 
 Provider: ____________________ Date: __________  
-NexHelp authorized signatory: ____________________ Date: __________
+Kwick authorized signatory: ____________________ Date: __________
 
 **Publication gate:** Do not onboard providers under this draft until counsel approves it and the operational verification, insurance, pricing and dispute procedures are implemented.

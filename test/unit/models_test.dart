@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexhelp/shared/models/assignment.dart';
-import 'package:nexhelp/shared/models/service_category.dart';
-import 'package:nexhelp/shared/models/service_request.dart';
-import 'package:nexhelp/shared/models/user_profile.dart';
-import 'package:nexhelp/shared/models/user_role.dart';
+import 'package:kwick/shared/models/assignment.dart';
+import 'package:kwick/shared/models/service_category.dart';
+import 'package:kwick/shared/models/service_request.dart';
+import 'package:kwick/shared/models/user_profile.dart';
+import 'package:kwick/shared/models/user_role.dart';
 
 void main() {
   group('Domain Models Serialization', () {

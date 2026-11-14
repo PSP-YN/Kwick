@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexhelp/shared/models/service_request.dart';
+import 'package:kwick/shared/models/service_request.dart';
 
 void main() {
   group('OrderStatus State Transitions & Rules', () {

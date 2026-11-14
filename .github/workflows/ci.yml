@@ -1,4 +1,4 @@
-name: NexHelp CI
+name: Kwick CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 concurrency:
-  group: nexhelp-ci-${{ github.event.pull_request.number || github.ref }}
+  group: kwick-ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -41,14 +41,25 @@ jobs:
       - name: Run Tests
         run: flutter test --coverage
 
-      - name: Compile Android debug APK
-        run: flutter build apk --debug --dart-define=SUPABASE_URL=https://example.supabase.co --dart-define=SUPABASE_ANON_KEY=ci-placeholder
+      - name: Compile customer Android debug APK
+        run: flutter build apk --debug --flavor customer -t lib/main_customer.dart --dart-define=SUPABASE_URL=https://example.supabase.co --dart-define=SUPABASE_ANON_KEY=ci-placeholder
 
-      - name: Upload Android debug APK
+      - name: Upload customer debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: nexhelp-android-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: kwick-customer-android-debug-apk
+          path: build/app/outputs/flutter-apk/app-customer-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Compile partner Android debug APK
+        run: flutter build apk --debug --flavor provider -t lib/main_provider.dart --dart-define=SUPABASE_URL=https://example.supabase.co --dart-define=SUPABASE_ANON_KEY=ci-placeholder
+
+      - name: Upload partner debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kwick-partner-android-debug-apk
+          path: build/app/outputs/flutter-apk/app-provider-debug.apk
           if-no-files-found: error
           retention-days: 14
 

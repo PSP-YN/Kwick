@@ -1,4 +1,4 @@
-package com.nexhelp.nexhelp
+package com.kwick.app
 
 import io.flutter.embedding.android.FlutterActivity
 

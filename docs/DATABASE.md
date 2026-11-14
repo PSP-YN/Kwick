@@ -1,8 +1,8 @@
-# NexHelp Database Specification & Invariants
+# Kwick Database Specification & Invariants
 
 ## 1. Schema Overview
 
-The NexHelp database is implemented in PostgreSQL and managed through versioned Supabase migrations in `supabase/migrations/`:
+The Kwick database is implemented in PostgreSQL and managed through versioned Supabase migrations in `supabase/migrations/`:
 
 - `20261023000001_initial_schema.sql`: Core tables, check constraints, foreign keys, and indexes.
 - `20261023000002_rls_policies.sql`: Row-Level Security policies for Customer, Provider, Admin, and Public access.

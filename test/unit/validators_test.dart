@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexhelp/core/config/app_config.dart';
-import 'package:nexhelp/core/validation/validators.dart';
+import 'package:kwick/core/config/app_config.dart';
+import 'package:kwick/core/validation/validators.dart';
 
 void main() {
   group('Validators', () {
@@ -37,7 +37,7 @@ void main() {
       expect(Validators.validatePincode('123'), isNotNull);
       expect(
         Validators.validatePincode('110001'),
-        equals('NexHelp currently serves pincode 560102 (HSR Layout focus).'),
+        equals('Kwick currently serves pincode 560102 (HSR Layout focus).'),
       );
       expect(Validators.validatePincode(AppConfig.pilotPincode), isNull);
     });

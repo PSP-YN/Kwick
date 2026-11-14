@@ -6,6 +6,7 @@ import MetricCards from '../components/MetricCards';
 import DispatchQueue from '../components/DispatchQueue';
 import ProviderVerification from '../components/ProviderVerification';
 import DisputeResolution from '../components/DisputeResolution';
+import CommercialTerms from '../components/CommercialTerms';
 import {
   AdminMetrics,
   ServiceRequest,
@@ -22,7 +23,7 @@ import { MapPin, ShieldCheck, TrendingUp, Clock } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut: () => void }) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'dispatch' | 'providers' | 'disputes'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'dispatch' | 'providers' | 'commercial' | 'disputes'>('overview');
   const [metrics, setMetrics] = useState<AdminMetrics>({
     pending_requests: 0,
     active_jobs: 0,
@@ -127,17 +128,17 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
                 <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
-                      <MapPin className="w-5 h-5 text-emerald-300" />
-                      <h2 className="text-lg font-bold">560102 Service Zone (HSR Layout Focus)</h2>
+                      <MapPin className="w-5 h-5 text-[#F4A900]" />
+                      <h2 className="text-lg font-bold">HSR Layout Pilot · 560102</h2>
                     </div>
-                    <p className="text-xs text-emerald-100 max-w-xl">
-                      Single-pincode pilot zone. Koramangala remains out of scope until its service area and provider coverage are configured. Database constraints prevent overlapping active assignments. Financial amounts are stored in integer paise.
+                    <p className="text-xs text-zinc-200 max-w-xl">
+                      Initial service zone: HSR Layout, 560102. Additional Bengaluru neighbourhoods open only after partner coverage is verified. Financial amounts are stored in integer paise; fixed prices require review.
                     </p>
                   </div>
                   <div className="flex items-center space-x-3 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-xs">
-                    <ShieldCheck className="w-6 h-6 text-emerald-300" />
+                    <ShieldCheck className="w-6 h-6 text-[#F4A900]" />
                     <div>
-                      <p className="text-[11px] text-emerald-200 uppercase font-semibold">Security State</p>
+                      <p className="text-[11px] text-amber-200 uppercase font-semibold">Security State</p>
                       <p className="text-xs font-bold text-white">Row Level Security Active</p>
                     </div>
                   </div>
@@ -154,7 +155,7 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
                       </div>
                       <button
                         onClick={() => setActiveTab('dispatch')}
-                        className="text-xs text-emerald-700 font-semibold hover:underline"
+                        className="text-xs text-[#B97900] font-semibold hover:underline"
                       >
                         View Queue →
                       </button>
@@ -180,7 +181,7 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
                                   : req.status === 'in_progress'
                                   ? 'bg-blue-100 text-blue-800'
                                   : req.status === 'assigned'
-                                  ? 'bg-purple-100 text-purple-800'
+                                  ? 'bg-[#FFF3D6] text-[#8A5200]'
                                   : 'bg-amber-100 text-amber-800'
                               }`}
                             >
@@ -204,7 +205,7 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
                       </div>
                       <button
                         onClick={() => setActiveTab('providers')}
-                        className="text-xs text-emerald-700 font-semibold hover:underline"
+                        className="text-xs text-[#B97900] font-semibold hover:underline"
                       >
                         Manage Verifications →
                       </button>
@@ -261,6 +262,10 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
               />
             )}
 
+            {activeTab === 'commercial' && (
+              <CommercialTerms onActionComplete={loadData} />
+            )}
+
             {activeTab === 'disputes' && (
               <DisputeResolution
                 tickets={tickets}
@@ -275,7 +280,7 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
       {/* Footer */}
       <footer className="border-t border-zinc-200 bg-white py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center text-xs text-zinc-500">
-          NexHelp Operations Platform • 560102 Pilot Zone • PostgreSQL 17 + RLS • Pre-launch
+          Kwick Operations Platform • 560102 Pilot Zone • PostgreSQL 17 + RLS • Pre-launch
         </div>
       </footer>
     </div>
@@ -346,7 +351,7 @@ export default function AdminPage() {
       }
       const allowed = data?.some((entry) => entry.role === 'admin' || entry.role === 'super_admin');
       if (!allowed) {
-        setAuthError('This account does not have NexHelp administrator privileges.');
+        setAuthError('This account does not have Kwick administrator privileges.');
         setAuthStatus('denied');
         return;
       }
@@ -411,7 +416,7 @@ export default function AdminPage() {
     }
     if (!roles?.some((entry) => entry.role === 'admin' || entry.role === 'super_admin')) {
       await supabase.auth.signOut();
-      setAuthError('This account does not have NexHelp administrator privileges.');
+      setAuthError('This account does not have Kwick administrator privileges.');
       setAuthStatus('signed_out');
       return;
     }
@@ -432,7 +437,7 @@ export default function AdminPage() {
     try {
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
-        friendlyName: 'NexHelp Operations',
+        friendlyName: 'Kwick Operations',
       });
       if (error) throw error;
       setMfaFactorId(data.id);
@@ -503,7 +508,7 @@ export default function AdminPage() {
           ? 'Verify administrator MFA'
           : authStatus === 'mfa_enroll'
             ? 'Set up administrator MFA'
-            : 'NexHelp Operations';
+            : 'Kwick Operations';
 
   return (
     <main className="min-h-screen bg-zinc-950 flex items-center justify-center px-4 py-12">
@@ -512,7 +517,7 @@ export default function AdminPage() {
           <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600 text-white">
             <ShieldCheck className="h-6 w-6" />
           </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">NexHelp · Operations</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">Kwick · Operations</p>
           <h1 className="mt-2 text-2xl font-bold text-white">{heading}</h1>
           <p className="mt-2 text-sm text-zinc-400">Sign in with an account that has an admin or super-admin role.</p>
         </div>
@@ -534,7 +539,7 @@ export default function AdminPage() {
             {mfaQrCode && (
               <div className="rounded-lg bg-white p-4 text-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={mfaQrCode} alt="NexHelp Operations authenticator QR code" className="mx-auto h-52 w-52" />
+                <img src={mfaQrCode} alt="Kwick Operations authenticator QR code" className="mx-auto h-52 w-52" />
                 <p className="mt-3 text-xs text-zinc-700">Scan with an authenticator app. If scanning is unavailable, enter this secret manually:</p>
                 <code className="mt-2 block break-all text-xs text-zinc-900">{mfaSecret}</code>
               </div>

@@ -68,7 +68,7 @@ class Validators {
     }
     // Pilot region warning/check
     if (cleaned != AppConfig.pilotPincode) {
-      return 'NexHelp currently serves pincode ${AppConfig.pilotPincode} (HSR Layout focus).';
+      return 'Kwick currently serves pincode ${AppConfig.pilotPincode} (HSR Layout focus).';
     }
     return null;
   }

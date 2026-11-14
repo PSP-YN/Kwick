@@ -1,0 +1,3 @@
+#include "Release.xcconfig"
+PRODUCT_BUNDLE_IDENTIFIER = com.kwick.provider
+APP_DISPLAY_NAME = Kwick Partner

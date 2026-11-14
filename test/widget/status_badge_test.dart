@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexhelp/shared/models/provider_profile.dart';
-import 'package:nexhelp/shared/models/service_request.dart';
-import 'package:nexhelp/shared/widgets/status_badge.dart';
+import 'package:kwick/shared/models/provider_profile.dart';
+import 'package:kwick/shared/models/service_request.dart';
+import 'package:kwick/shared/widgets/status_badge.dart';
 
 void main() {
   group('StatusBadge Widget Tests', () {

@@ -1,6 +1,6 @@
-# NexHelp Public Landing Page
+# Kwick Public Landing Page
 
-This is the public, static marketing site for NexHelp. It is intentionally separate from the authenticated operations console in `admin/`.
+This is the public, static marketing site for Kwick. It is intentionally separate from the authenticated operations console in `admin/`.
 
 ## Local preview
 
@@ -23,7 +23,7 @@ node landing/validate.mjs
 
 ## Deploy to Vercel
 
-Create a separate Vercel project connected to `PSP-YN/NexHelp`:
+Create a separate Vercel project connected to `PSP-YN/Kwick`:
 
 - Root Directory: `landing`
 - Framework Preset: Other
@@ -36,7 +36,7 @@ The site is static HTML/CSS/JavaScript. It does not collect personal information
 
 ## Content and safety boundaries
 
-- The first planned service area is HSR Layout and Koramangala, Bengaluru South (560102).
+- The first planned service area is HSR Layout, Bengaluru South (560102).
 - The first service categories are plumbing and electrical.
 - Provider verification is an operations process; do not imply that all providers are already verified or available.
 - AI triage is optional and advisory. It cannot book, dispatch, set prices, or replace professional or emergency advice.

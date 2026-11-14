@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/errors/failures.dart';
+import '../../core/config/app_mode.dart';
 import '../../shared/models/provider_profile.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/models/user_role.dart';
@@ -85,18 +86,22 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       final profile = await _supabase.fetchUserProfile(user.id);
-      ProviderProfile? providerProfile;
-
-      if (profile != null && profile.isProvider) {
-        providerProfile = await _supabase.getProviderProfile(user.id);
+      final requiredRole = ref.read(kwickAppModeProvider).role;
+      if (profile == null || !profile.roles.contains(requiredRole)) {
+        state = AuthState(
+          status: AuthStatus.unauthenticated,
+          errorMessage: requiredRole == UserRole.provider
+              ? 'This account is not registered as a Kwick service partner. Use the customer app or create a partner account.'
+              : 'This account is not registered as a Kwick customer. Use the Kwick Partner app or create a customer account.',
+        );
+        return;
       }
 
-      final activeRole =
-          (profile != null &&
-              profile.isProvider &&
-              !profile.roles.contains(UserRole.customer))
-          ? UserRole.provider
-          : (profile?.roles.first ?? UserRole.customer);
+      ProviderProfile? providerProfile;
+      if (requiredRole == UserRole.provider) {
+        providerProfile = await _supabase.getProviderProfile(user.id);
+      }
+      final activeRole = requiredRole;
 
       state = state.copyWith(
         status: AuthStatus.authenticated,
@@ -133,16 +138,22 @@ class AuthController extends Notifier<AuthState> {
     required String password,
     required String fullName,
     String? phone,
-    UserRole initialRole = UserRole.customer,
+    UserRole? initialRole,
   }) async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
     try {
+      final requiredRole = ref.read(kwickAppModeProvider).role;
+      if (initialRole != null && initialRole != requiredRole) {
+        throw const ValidationFailure(
+          'This Kwick app can only create its own account type.',
+        );
+      }
       await _supabase.signUp(
         email: email,
         password: password,
         fullName: fullName,
         phone: phone,
-        initialRole: initialRole,
+        initialRole: requiredRole,
       );
       await refreshProfile();
     } on Failure catch (e) {

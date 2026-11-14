@@ -132,7 +132,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  'NexHelp Intelligence',
+                  'Kwick Intelligence',
                   style: AppTextStyles.headingSmall,
                 ),
               ),
@@ -289,7 +289,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             ? rawDispatcherNote.substring(0, 200)
             : rawDispatcherNote;
         noteParts.add(
-          'NexHelp AI triage (advisory). Urgency: ${_diagnosis!['urgency']}. '
+          'Kwick AI triage (advisory). Urgency: ${_diagnosis!['urgency']}. '
           'Dispatcher: $dispatcherNote. '
           'Safety: ${safetyAlerts.isEmpty ? 'No alerts returned' : safetyAlerts}.',
         );
@@ -371,7 +371,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
-                          'NexHelp currently serves pincode ${AppConfig.pilotPincode} (HSR Layout focus). Requests outside this service zone cannot be dispatched.',
+                          'Kwick currently serves pincode ${AppConfig.pilotPincode} (HSR Layout focus). Requests outside this service zone cannot be dispatched.',
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.info,
                           ),
@@ -546,7 +546,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   label: Text(
                     _isDiagnosing
                         ? 'Assessing issue…'
-                        : 'Analyze issue with NexHelp AI',
+                        : 'Analyze issue with Kwick AI',
                   ),
                 ),
                 if (_diagnosisError != null) ...[

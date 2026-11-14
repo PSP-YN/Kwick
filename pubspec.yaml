@@ -1,4 +1,4 @@
-name: nexhelp
+name: kwick
 description: "Trust-first home services with AI-assisted issue triage and verified technician dispatch."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -40,6 +40,7 @@ dependencies:
   flutter_secure_storage: ^11.2.0
   intl: ^0.20.3
   uuid: ^4.6.0
+  file_picker: ^13.3.3
 
 dev_dependencies:
   flutter_test:
@@ -63,6 +64,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/branding/kwick_mark.png
+    - assets/branding/kwick_logo.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -2,7 +2,7 @@
 
 ## Our commitment
 
-The NexHelp project is committed to a respectful, inclusive, and harassment-free experience for everyone, regardless of background, identity, disability, experience level, or personal characteristics.
+The Kwick project is committed to a respectful, inclusive, and harassment-free experience for everyone, regardless of background, identity, disability, experience level, or personal characteristics.
 
 ## Expected behavior
 

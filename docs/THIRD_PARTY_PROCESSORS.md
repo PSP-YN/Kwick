@@ -1,4 +1,4 @@
-# NexHelp Third-Party Processor and Data-Flow Register
+# Kwick Third-Party Processor and Data-Flow Register
 
 **Status: PRE-LAUNCH.** Verify current contracts, DPAs, data locations, sub-processors, retention and security evidence before launch.
 
@@ -16,4 +16,4 @@
 - Keep Supabase service-role keys server-side only.
 - Admin UI must rely on database RLS and verified user sessions; client-side route hiding is not authorization.
 - Use private Storage buckets and short-lived signed URLs for identity documents.
-- Do not claim that all NexHelp data remains in India merely because the Supabase database is in Mumbai. Verify every processor and data flow separately.
+- Do not claim that all Kwick data remains in India merely because the Supabase database is in Mumbai. Verify every processor and data flow separately.

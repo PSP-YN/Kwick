@@ -1,4 +1,4 @@
-# NexHelp Customer Terms — Draft for Legal Review
+# Kwick Customer Terms — Draft for Legal Review
 
 **DRAFT — NOT APPROVED FOR PUBLICATION.** The legal entity, addresses, service-provider model, cancellation rules and governing-law clauses require confirmation by Indian counsel.
 
@@ -9,7 +9,7 @@
 
 ## 1. Platform role
 
-NexHelp is intended to operate as a digital marketplace that helps customers submit home-service requests and connects them with eligible independent service providers. Unless the final contract expressly says otherwise, the service work is performed by the provider, not by NexHelp. The actual legal classification must reflect the real operating relationship and must not rely only on a contract label.
+Kwick is intended to operate as a digital marketplace that helps customers submit home-service requests and connects them with eligible independent service providers. Unless the final contract expressly says otherwise, the service work is performed by the provider, not by Kwick. The actual legal classification must reflect the real operating relationship and must not rely only on a contract label.
 
 ## 2. Account eligibility
 
@@ -17,7 +17,7 @@ NexHelp is intended to operate as a digital marketplace that helps customers sub
 
 ## 3. Requests and booking confirmation
 
-Submitting a request is a request for service, not a guarantee of provider availability or a confirmed appointment. NexHelp operations reviews the request and may contact the customer for clarification. A booking becomes confirmed only when the platform communicates a clear confirmation after an eligible provider has accepted the assignment. The customer must not treat an AI assessment or an unconfirmed request as a booking.
+Submitting a request is a request for service, not a guarantee of provider availability or a confirmed appointment. Kwick operations reviews the request and may contact the customer for clarification. A booking becomes confirmed only when the platform communicates a clear confirmation after an eligible provider has accepted the assignment. The customer must not treat an AI assessment or an unconfirmed request as a booking.
 
 ## 4. Service area and categories
 
@@ -25,7 +25,7 @@ The initial configured service zone is pincode 560102, with an HSR Layout focus.
 
 ## 5. Provider identity and work
 
-Providers are subject to the verification steps disclosed by NexHelp. Verification status is not a guarantee of workmanship, safety, licensing or future conduct. Customers should verify the scope and price directly with the provider before work begins. Electrical work must be performed only by appropriately qualified/authorized personnel and in accordance with applicable safety requirements.
+Providers are subject to the verification steps disclosed by Kwick. Verification status is not a guarantee of workmanship, safety, licensing or future conduct. Customers should verify the scope and price directly with the provider before work begins. Electrical work must be performed only by appropriately qualified/authorized personnel and in accordance with applicable safety requirements.
 
 ## 6. Price and payment
 
@@ -41,7 +41,7 @@ AI triage is optional and requires a separate affirmative consent action. It sen
 
 ## 9. Emergencies and safety
 
-NexHelp is not an emergency-response service. For fire, smoke, gas leak, electric shock, exposed live wiring, major flooding or immediate risk to life, move away from the hazard and contact the relevant emergency service or utility. Do not attempt unsafe repairs based on app content or AI output.
+Kwick is not an emergency-response service. For fire, smoke, gas leak, electric shock, exposed live wiring, major flooding or immediate risk to life, move away from the hazard and contact the relevant emergency service or utility. Do not attempt unsafe repairs based on app content or AI output.
 
 ## 10. Prohibited conduct
 

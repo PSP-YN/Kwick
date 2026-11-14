@@ -1,4 +1,4 @@
-# NexHelp Security & Row-Level Security (RLS) Specification
+# Kwick Security & Row-Level Security (RLS) Specification
 
 ## 1. Threat Model & Security Principles
 

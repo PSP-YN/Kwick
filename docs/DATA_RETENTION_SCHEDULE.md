@@ -1,4 +1,4 @@
-# NexHelp Data Retention and Deletion Schedule
+# Kwick Data Retention and Deletion Schedule
 
 **Status: PRE-LAUNCH DRAFT.** Final periods require Indian legal, tax and operational approval. Do not invent retention periods or retain identity documents indefinitely.
 
@@ -21,5 +21,5 @@
 - Do not delete records subject to active legal holds, fraud investigations, safety claims or mandatory tax/consumer retention.
 - Account deletion must remove or de-identify data that no longer has a lawful retention purpose, while retaining only records legally required.
 - Verify deletion from primary database, Storage objects, search indexes, logs and backups according to the approved lifecycle.
-- Never store full Aadhaar numbers, Aadhaar biometrics, passwords or payment-card data in NexHelp application tables.
+- Never store full Aadhaar numbers, Aadhaar biometrics, passwords or payment-card data in Kwick application tables.
 - Reassess this schedule whenever a new processor, payment flow, identity-verification method or data category is introduced.

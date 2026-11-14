@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexhelp/shared/models/user_profile.dart';
-import 'package:nexhelp/shared/models/user_role.dart';
-import 'package:nexhelp/shared/models/assignment.dart';
-import 'package:nexhelp/shared/models/provider_profile.dart';
-import 'package:nexhelp/shared/models/review.dart';
-import 'package:nexhelp/shared/models/support_ticket.dart';
-import 'package:nexhelp/shared/models/service_area.dart';
+import 'package:kwick/shared/models/user_profile.dart';
+import 'package:kwick/shared/models/user_role.dart';
+import 'package:kwick/shared/models/assignment.dart';
+import 'package:kwick/shared/models/provider_profile.dart';
+import 'package:kwick/shared/models/review.dart';
+import 'package:kwick/shared/models/support_ticket.dart';
+import 'package:kwick/shared/models/service_area.dart';
 
 void main() {
   group('Extended Domain Models Tests', () {

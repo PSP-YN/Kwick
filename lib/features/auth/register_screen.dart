@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/config/app_mode.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/validation/validators.dart';
-import '../../shared/models/user_role.dart';
 import '../../shared/widgets/app_text_field.dart';
 import '../../shared/widgets/primary_button.dart';
 import 'auth_controller.dart';
@@ -24,7 +24,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  UserRole _selectedRole = UserRole.customer;
   bool _obscurePassword = true;
 
   @override
@@ -45,7 +44,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             password: _passwordController.text,
             fullName: _nameController.text.trim(),
             phone: _phoneController.text.trim(),
-            initialRole: _selectedRole,
           );
     }
   }
@@ -53,6 +51,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
+    final mode = ref.watch(kwickAppModeProvider);
+    final isProviderApp = mode == KwickAppMode.provider;
     final isLoading = authState.status == AuthStatus.loading;
 
     return Scaffold(
@@ -66,42 +66,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Join NexHelp', style: AppTextStyles.headingLarge),
+                Text(
+                  isProviderApp ? 'Join Kwick as a Partner' : 'Join Kwick',
+                  style: AppTextStyles.headingLarge,
+                ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Book verified home services or offer your skills as a professional',
+                  isProviderApp
+                      ? 'Create your professional account and submit your trade profile for review.'
+                      : 'Find trusted local professionals for the work your home needs.',
                   style: AppTextStyles.bodyMedium,
                 ),
                 const SizedBox(height: AppSpacing.lg),
 
-                // Account Type Selector
-                Text('I am signing up as:', style: AppTextStyles.label),
-                const SizedBox(height: AppSpacing.xs),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _RoleCard(
-                        title: 'Customer',
-                        subtitle: 'Need plumbing or electrical repairs',
-                        icon: Icons.home_outlined,
-                        isSelected: _selectedRole == UserRole.customer,
-                        onTap: () =>
-                            setState(() => _selectedRole = UserRole.customer),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: _RoleCard(
-                        title: 'Service Pro',
-                        subtitle: 'Plumber or electrician looking for jobs',
-                        icon: Icons.handyman_outlined,
-                        isSelected: _selectedRole == UserRole.provider,
-                        onTap: () =>
-                            setState(() => _selectedRole = UserRole.provider),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: AppSpacing.lg),
 
                 // Error alert if present
@@ -208,8 +185,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         const SizedBox(height: AppSpacing.lg),
 
                         PrimaryButton(
-                          label: _selectedRole == UserRole.provider
-                              ? 'Continue to Provider Onboarding'
+                          label: isProviderApp
+                              ? 'Continue to Partner Onboarding'
                               : 'Create Customer Account',
                           onPressed: _submit,
                           isLoading: isLoading,
@@ -238,86 +215,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RoleCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _RoleCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: AppSpacing.roundedMd,
-      child: Container(
-        padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.05)
-              : AppColors.surface,
-          borderRadius: AppSpacing.roundedMd,
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
-            width: isSelected ? 2.0 : 1.0,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 22.0,
-                  color: isSelected
-                      ? AppColors.primary
-                      : AppColors.textSecondary,
-                ),
-                const Spacer(),
-                if (isSelected)
-                  const Icon(
-                    Icons.check_circle,
-                    size: 18.0,
-                    color: AppColors.primary,
-                  )
-                else
-                  const Icon(
-                    Icons.radio_button_unchecked,
-                    size: 18.0,
-                    color: AppColors.border,
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              title,
-              style: AppTextStyles.headingSmall.copyWith(
-                color: isSelected ? AppColors.primary : AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              subtitle,
-              style: AppTextStyles.bodySmall,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
         ),
       ),
     );

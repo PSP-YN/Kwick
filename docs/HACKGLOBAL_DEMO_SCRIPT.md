@@ -1,10 +1,10 @@
-# HackGlobal 2026 — NexHelp Demo Video Script
+# HackGlobal 2026 — Kwick Demo Video Script
 
 Target duration: 3 minutes. Record the actual application and dashboard. Do not use fabricated product screenshots or present seed data as live customers.
 
 ## Before recording
 
-- Confirm the demo environment is connected to the intended NexHelp Supabase project.
+- Confirm the demo environment is connected to the intended Kwick Supabase project.
 - Confirm the Gemini Edge Function is deployed and responds with a live assessment.
 - Use dedicated demo accounts and clearly labelled demo requests.
 - Ensure the admin account has the admin role.
@@ -15,17 +15,17 @@ Target duration: 3 minutes. Record the actual application and dashboard. Do not 
 
 ### 0:00–0:20 — Opening
 
-**On screen:** NexHelp customer app landing screen.
+**On screen:** Kwick customer app landing screen.
 
 **Say:**  
-"Finding a home-service technician is not just a booking problem. Customers often do not know which trade they need, how urgent the issue is, or whether the person arriving is qualified. NexHelp connects issue understanding, trusted dispatch, and accountable resolution in one workflow."
+"Finding a home-service technician is not just a booking problem. Customers often do not know which trade they need, how urgent the issue is, or whether the person arriving is qualified. Kwick connects issue understanding, trusted dispatch, and accountable resolution in one workflow."
 
 ### 0:20–0:55 — Customer issue and AI triage
 
-**On screen:** Create a plumbing request and enter a realistic demo issue such as a leaking kitchen sink. Run NexHelp Intelligence.
+**On screen:** Create a plumbing request and enter a realistic demo issue such as a leaking kitchen sink. Run Kwick Intelligence.
 
 **Say:**  
-"Instead of asking customers to guess the technical category, NexHelp can assess a plain-language description. The AI returns a suggested trade, urgency, a concise summary, safety alerts, and follow-up questions. This is advisory guidance, not a professional diagnosis. The customer reviews it and remains in control."
+"Instead of asking customers to guess the technical category, Kwick can assess a plain-language description. The AI returns a suggested trade, urgency, a concise summary, safety alerts, and follow-up questions. This is advisory guidance, not a professional diagnosis. The customer reviews it and remains in control."
 
 **Show:** Suggested category, urgency, safety alerts, follow-up questions, and the option to apply the suggested category.
 
@@ -41,7 +41,7 @@ Target duration: 3 minutes. Record the actual application and dashboard. Do not 
 **On screen:** Sign in to the operations console. Open the dispatch queue, select the request, inspect eligible providers, and assign a demo provider.
 
 **Say:**  
-"Operations staff review requests and assign a technician. NexHelp enforces the important trust constraints: the provider must be approved, available, qualified for the requested trade, and registered for the service area. Candidate ranking uses visible signals such as rating, completed jobs, and experience."
+"Operations staff review requests and assign a technician. Kwick enforces the important trust constraints: the provider must be approved, available, qualified for the requested trade, and registered for the service area. Candidate ranking uses visible signals such as rating, completed jobs, and experience."
 
 ### 2:00–2:30 — Provider lifecycle
 
@@ -59,10 +59,10 @@ Target duration: 3 minutes. Record the actual application and dashboard. Do not 
 
 ### 2:50–3:00 — Close
 
-**On screen:** NexHelp logo and tagline.
+**On screen:** Kwick logo and tagline.
 
 **Say:**  
-"NexHelp: Diagnose. Match. Resolve. Better information before dispatch, and accountability through resolution."
+"Kwick: Diagnose. Match. Resolve. Better information before dispatch, and accountability through resolution."
 
 ## Recording checklist
 

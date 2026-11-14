@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexhelp/shared/widgets/empty_state_view.dart';
-import 'package:nexhelp/shared/widgets/error_state_view.dart';
+import 'package:kwick/shared/widgets/empty_state_view.dart';
+import 'package:kwick/shared/widgets/error_state_view.dart';
 
 void main() {
   group('EmptyStateView & ErrorStateView Widget Tests', () {

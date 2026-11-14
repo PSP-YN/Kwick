@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/config/app_config.dart';
+import 'core/config/app_mode.dart';
 
-Future<void> main() async {
+Future<void> main() => bootstrapKwick(KwickAppMode.customer);
+
+Future<void> bootstrapKwick(KwickAppMode mode) async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (!AppConfig.hasValidSupabaseConfig) {
-    runApp(const _BackendConfigurationRequiredApp());
+    runApp(_BackendConfigurationRequiredApp(mode: mode));
     return;
   }
 
@@ -19,30 +22,37 @@ Future<void> main() async {
       anonKey: AppConfig.supabaseAnonKey,
     );
   } catch (error, stackTrace) {
-    debugPrint('NexHelp backend initialization failed: $error');
+    debugPrint('Kwick backend initialization failed: $error');
     debugPrintStack(stackTrace: stackTrace);
-    runApp(const _BackendConfigurationRequiredApp());
+    runApp(_BackendConfigurationRequiredApp(mode: mode));
     return;
   }
 
-  runApp(const ProviderScope(child: NexHelpApp()));
+  runApp(
+    ProviderScope(
+      overrides: [kwickAppModeProvider.overrideWithValue(mode)],
+      child: KwickApp(mode: mode),
+    ),
+  );
 }
 
 class _BackendConfigurationRequiredApp extends StatelessWidget {
-  const _BackendConfigurationRequiredApp();
+  const _BackendConfigurationRequiredApp({required this.mode});
+
+  final KwickAppMode mode;
 
   @override
   Widget build(BuildContext context) {
-    const ink = Color(0xFF172B25);
-    const green = Color(0xFF1F5948);
+    const ink = Color(0xFF17212B);
+    const gold = Color(0xFFF4A900);
 
     return MaterialApp(
-      title: 'NexHelp setup required',
+      title: '${mode.displayName} setup required',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: green),
-        scaffoldBackgroundColor: const Color(0xFFF7F7F2),
+        colorScheme: ColorScheme.fromSeed(seedColor: gold),
+        scaffoldBackgroundColor: const Color(0xFFFAF9F5),
       ),
       home: Scaffold(
         body: SafeArea(
@@ -55,7 +65,7 @@ class _BackendConfigurationRequiredApp extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E7DE)),
+                    border: Border.all(color: const Color(0xFFE8E5DC)),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(28),
@@ -65,13 +75,13 @@ class _BackendConfigurationRequiredApp extends StatelessWidget {
                       children: [
                         const Icon(
                           Icons.cloud_off_outlined,
-                          color: green,
+                          color: ink,
                           size: 42,
                         ),
                         const SizedBox(height: 22),
-                        const Text(
-                          'NexHelp is not connected yet',
-                          style: TextStyle(
+                        Text(
+                          '${mode.displayName} is not connected yet',
+                          style: const TextStyle(
                             color: ink,
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
@@ -79,9 +89,9 @@ class _BackendConfigurationRequiredApp extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         const Text(
-                          'This app build is missing a valid NexHelp backend configuration. No bookings or account data can be loaded until the dedicated Supabase project is configured.',
+                          'This build is missing a valid Kwick backend configuration. Accounts, provider verification and bookings remain unavailable until the Kwick Supabase project is configured.',
                           style: TextStyle(
-                            color: Color(0xFF5D6B63),
+                            color: Color(0xFF5D6670),
                             height: 1.6,
                             fontSize: 14,
                           ),
@@ -96,11 +106,10 @@ class _BackendConfigurationRequiredApp extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        SelectableText(
-                          'SUPABASE_URL=https://<project-ref>.supabase.co\n'
-                          'SUPABASE_ANON_KEY=<public-anon-or-publishable-key>',
+                        const SelectableText(
+                          'SUPABASE_URL=https://<project-ref>.supabase.co\nSUPABASE_ANON_KEY=<public-anon-or-publishable-key>',
                           style: TextStyle(
-                            color: green,
+                            color: ink,
                             fontFamily: 'monospace',
                             fontSize: 11,
                             height: 1.7,
@@ -108,7 +117,7 @@ class _BackendConfigurationRequiredApp extends StatelessWidget {
                         ),
                         const SizedBox(height: 18),
                         const Text(
-                          'Do not put a service-role key or Gemini API key in this app. Configure secrets only in the trusted server environment.',
+                          'Never put a service-role key or AI provider key in either mobile app. Keep privileged secrets on the server.',
                           style: TextStyle(
                             color: Color(0xFF7A6250),
                             fontSize: 12,

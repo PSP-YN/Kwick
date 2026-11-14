@@ -1,4 +1,4 @@
-name: Android Release
+name: Kwick Android Releases
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   android-release:
-    name: Build signed Android APK and App Bundle
+    name: Build signed customer and partner APKs and App Bundles
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
@@ -47,7 +47,7 @@ jobs:
           done
           case "$SUPABASE_URL" in
             https://*.supabase.co) ;;
-            *) echo "::error::SUPABASE_URL must be the dedicated HTTPS NexHelp project URL"; exit 1 ;;
+            *) echo "::error::SUPABASE_URL must be the dedicated HTTPS Kwick project URL"; exit 1 ;;
           esac
           if [[ "$SUPABASE_URL" == *example* || "$SUPABASE_URL" == *placeholder* ]]; then
             echo "::error::SUPABASE_URL still contains a placeholder"; exit 1
@@ -87,28 +87,53 @@ jobs:
           flutter analyze
           flutter test --coverage
 
-      - name: Build signed release APK and AAB
+      - name: Build signed customer APK and AAB
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           set -euo pipefail
-          flutter build apk --release --build-number="$GITHUB_RUN_NUMBER" --obfuscate --split-debug-info=build/symbols-apk \
+          flutter build apk --release --flavor customer -t lib/main_customer.dart --build-number="$GITHUB_RUN_NUMBER" --obfuscate --split-debug-info=build/symbols/customer-apk \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
-          flutter build appbundle --release --build-number="$GITHUB_RUN_NUMBER" --obfuscate --split-debug-info=build/symbols-aab \
+          flutter build appbundle --release --flavor customer -t lib/main_customer.dart --build-number="$GITHUB_RUN_NUMBER" --obfuscate --split-debug-info=build/symbols/customer-aab \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
 
-      - name: Upload signed release outputs
+      - name: Build signed partner APK and AAB
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          flutter build apk --release --flavor provider -t lib/main_provider.dart --build-number="$GITHUB_RUN_NUMBER" --obfuscate --split-debug-info=build/symbols/partner-apk \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          flutter build appbundle --release --flavor provider -t lib/main_provider.dart --build-number="$GITHUB_RUN_NUMBER" --obfuscate --split-debug-info=build/symbols/partner-aab \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+
+      - name: Upload signed customer release outputs
         uses: actions/upload-artifact@v4
         with:
-          name: nexhelp-android-release
+          name: kwick-customer-android-release
           path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
-            build/symbols-apk/
-            build/symbols-aab/
+            build/app/outputs/flutter-apk/app-customer-release.apk
+            build/app/outputs/bundle/customerRelease/app-customer-release.aab
+            build/symbols/customer-apk/
+            build/symbols/customer-aab/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload signed partner release outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: kwick-partner-android-release
+          path: |
+            build/app/outputs/flutter-apk/app-provider-release.apk
+            build/app/outputs/bundle/providerRelease/app-provider-release.aab
+            build/symbols/partner-apk/
+            build/symbols/partner-aab/
           if-no-files-found: error
           retention-days: 30
 

@@ -7,7 +7,6 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utilities/date_formatter.dart';
 import '../../shared/models/service_category.dart';
-import '../../shared/models/user_role.dart';
 import '../../shared/widgets/error_state_view.dart';
 import '../../shared/widgets/loading_indicator.dart';
 import '../../shared/widgets/status_badge.dart';
@@ -23,6 +22,7 @@ class CustomerHomeScreen extends ConsumerStatefulWidget {
 
 class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   int _currentNavIndex = 0;
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
@@ -36,17 +36,11 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(6.0),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: AppSpacing.roundedSm,
-              ),
-              child: const Icon(
-                Icons.handyman,
-                size: 20.0,
-                color: AppColors.textInverse,
-              ),
+            Image.asset(
+              'assets/branding/kwick_mark.png',
+              width: 34,
+              height: 34,
+              fit: BoxFit.contain,
             ),
             const SizedBox(width: AppSpacing.sm),
             Text(
@@ -58,18 +52,6 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
           ],
         ),
         actions: [
-          // If user has provider role, show pro switch shortcut
-          if (profile?.roles.contains(UserRole.provider) ?? false)
-            TextButton.icon(
-              onPressed: () {
-                ref
-                    .read(authControllerProvider.notifier)
-                    .switchActiveRole(UserRole.provider);
-                context.go('/provider/home');
-              },
-              icon: const Icon(Icons.swap_horiz, size: 18.0),
-              label: const Text('Pro Mode'),
-            ),
           IconButton(
             icon: const Icon(Icons.logout_outlined),
             tooltip: 'Sign Out',
@@ -98,7 +80,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Hello, ${profile?.fullName.split(' ').first ?? 'there'} 👋',
+                          'Hello, ${profile?.fullName.split(' ').first ?? 'there'}',
                           style: AppTextStyles.headingLarge,
                         ),
                         const SizedBox(height: AppSpacing.xs),
@@ -131,7 +113,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                         ),
                         const SizedBox(width: 4.0),
                         Text(
-                          'HSR Layout • 560102',
+                          'HSR Layout · 560102',
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.info,
                             fontWeight: FontWeight.w600,
@@ -141,6 +123,39 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              TextField(
+                onChanged: (value) =>
+                    setState(() => _searchQuery = value.trim().toLowerCase()),
+                decoration: InputDecoration(
+                  hintText: 'Search plumbing, electrical…',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchQuery.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear search',
+                          onPressed: () => setState(() => _searchQuery = ''),
+                          icon: const Icon(Icons.close),
+                        ),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: AppSpacing.roundedMd,
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: AppSpacing.roundedMd,
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: AppSpacing.roundedMd,
+                    borderSide: const BorderSide(
+                      color: AppColors.secondaryDark,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
 
@@ -229,13 +244,10 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
               ),
 
               // Service Categories Section
-              Text(
-                'Available Pilot Services',
-                style: AppTextStyles.headingMedium,
-              ),
+              Text('Services in your area', style: AppTextStyles.headingMedium),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Book trusted, background-checked professionals in Bengaluru South',
+                'Choose a service currently available in HSR Layout. More categories will open as local partners are verified.',
                 style: AppTextStyles.bodySmall,
               ),
               const SizedBox(height: AppSpacing.md),
@@ -255,10 +267,33 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                     );
                   }
 
-                  return Column(
-                    children: categories
-                        .map((cat) => _CategoryCard(category: cat))
-                        .toList(),
+                  final visibleCategories = categories.where((category) {
+                    final query = _searchQuery;
+                    return query.isEmpty ||
+                        category.name.toLowerCase().contains(query) ||
+                        category.description.toLowerCase().contains(query);
+                  }).toList();
+                  if (visibleCategories.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 28),
+                      child: Center(
+                        child: Text('No active service matches that search.'),
+                      ),
+                    );
+                  }
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: visibleCategories.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 1.03,
+                        ),
+                    itemBuilder: (context, index) =>
+                        _CategoryCard(category: visibleCategories[index]),
                   );
                 },
                 loading: () => const Center(child: LoadingIndicator()),
@@ -281,30 +316,27 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Why Choose NexHelp?',
-                      style: AppTextStyles.headingSmall,
-                    ),
+                    Text('Why Kwick?', style: AppTextStyles.headingSmall),
                     const SizedBox(height: AppSpacing.md),
                     _TrustItem(
                       icon: Icons.verified_user_outlined,
                       title: 'Verified Professionals',
                       description:
-                          'Plumbers and electricians are personally verified with trade checks.',
+                          'Providers are reviewed before activation. Verification status is visible before dispatch.',
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     _TrustItem(
                       icon: Icons.currency_rupee,
                       title: 'Transparent Pricing',
                       description:
-                          'Fair pricing guidance with no hidden platform charges.',
+                          'Confirm the service scope and provider quote before work begins.',
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     _TrustItem(
                       icon: Icons.support_agent_outlined,
                       title: 'Operational Support',
                       description:
-                          'Dedicated operator dispatch and dispute resolution for every job.',
+                          'A Kwick operations team reviews requests and handles support during the pilot.',
                     ),
                   ],
                 ),
@@ -365,60 +397,59 @@ class _CategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: AppSpacing.roundedMd,
         onTap: () => context.push('/customer/book?categoryId=${category.id}'),
         child: Padding(
-          padding: AppSpacing.paddingCard,
-          child: Row(
+          padding: const EdgeInsets.all(14),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(12.0),
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: AppSpacing.roundedMd,
+                  color: AppColors.secondary.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   _resolveIcon(category.iconKey),
-                  size: 32.0,
+                  size: 25,
                   color: AppColors.primary,
                 ),
               ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(category.name, style: AppTextStyles.headingSmall),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      category.description,
-                      style: AppTextStyles.bodyMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+              const Spacer(),
+              Text(
+                category.name,
+                style: AppTextStyles.headingSmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                category.description,
+                style: AppTextStyles.bodySmall,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 9),
+              Row(
+                children: [
+                  Text(
+                    'Explore',
+                    style: AppTextStyles.button.copyWith(
+                      color: AppColors.primary,
+                      fontSize: 12,
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: [
-                        Text(
-                          'Book Service',
-                          style: AppTextStyles.button.copyWith(
-                            color: AppColors.primary,
-                            fontSize: 13.0,
-                          ),
-                        ),
-                        const SizedBox(width: 4.0),
-                        const Icon(
-                          Icons.arrow_forward,
-                          size: 14.0,
-                          color: AppColors.primary,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.arrow_forward,
+                    size: 14,
+                    color: AppColors.secondaryDark,
+                  ),
+                ],
               ),
             ],
           ),

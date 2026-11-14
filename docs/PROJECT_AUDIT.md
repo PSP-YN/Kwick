@@ -1,4 +1,4 @@
-# NexHelp — Initial Repository and Environment Audit
+# Kwick — Initial Repository and Environment Audit
 
 **Date:** 2026-10-23  
 **Auditor:** Principal Software Architect & Lead Engineer  
@@ -51,7 +51,7 @@
 
 3. **Operations Dashboard (`admin/`):**
    - **Framework:** Next.js with TypeScript and Tailwind CSS.
-   - **Role:** Protected internal tool for NexHelp operators (provider review, manual dispatch, audit logs).
+   - **Role:** Protected internal tool for Kwick operators (provider review, manual dispatch, audit logs).
 
 ---
 

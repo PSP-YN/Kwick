@@ -16,7 +16,7 @@ BEGIN
     v_full_name := NULLIF(split_part(COALESCE(NEW.email, ''), '@', 1), '');
   END IF;
   IF v_full_name IS NULL OR length(v_full_name) < 2 THEN
-    v_full_name := 'NexHelp User';
+    v_full_name := 'Kwick User';
   END IF;
 
   v_initial_role := NEW.raw_user_meta_data ->> 'initial_role';
@@ -59,7 +59,7 @@ SELECT
     CASE
       WHEN length(split_part(COALESCE(u.email, ''), '@', 1)) >= 2
         THEN split_part(u.email, '@', 1)
-      ELSE 'NexHelp User'
+      ELSE 'Kwick User'
     END
   ),
   NULLIF(u.raw_user_meta_data ->> 'phone', ''),

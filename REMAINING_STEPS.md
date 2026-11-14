@@ -1,29 +1,29 @@
-# NexHelp — Remaining Work & Production Launch Checklist
+# Kwick — Remaining Work & Production Launch Checklist
 
 > **Status:** The public landing page is deployed. The mobile app, database, AI function, and operations console are not yet a live customer service. A successful CI build does not by itself authorize a public pilot.
 
 ## Current status
 
 - Public landing page: [https://nexhelp-landing.vercel.app/](https://nexhelp-landing.vercel.app/)
-- Repository: [PSP-YN/NexHelp](https://github.com/PSP-YN/NexHelp)
+- Repository: [PSP-YN/Kwick](https://github.com/PSP-YN/Kwick)
 - Working branch: `hackglobal/nexhelp-intelligence`
-- Draft PR: [#2](https://github.com/PSP-YN/NexHelp/pull/2)
-- Backend: **Not provisioned.** Supabase rejected the $0/month NexHelp project creation because the organization reached its two-project free-tier limit. CareerOS is inactive and JanaSetu is active. Neither project was deleted or upgraded.
+- Draft PR: [#2](https://github.com/PSP-YN/Kwick/pull/2)
+- Backend: **Not provisioned.** Supabase rejected the $0/month Kwick project creation because the organization reached its two-project free-tier limit. CareerOS is inactive and JanaSetu is active. Neither project was deleted or upgraded.
 - Android: CI has compiled a debug APK on an earlier commit. The current CI workflow is configured to upload a debug APK artifact after its run completes. This is a test build, not a signed production release.
 - Android production release: A gated workflow exists at `.github/workflows/android-release.yml`; it requires a dedicated Supabase project and private Android signing secrets.
-- Operations console: Build passes in an earlier completed CI run, but it is not deployed or connected to a live NexHelp backend.
+- Operations console: Build passes in an earlier completed CI run, but it is not deployed or connected to a live Kwick backend.
 - iOS: Not compiled or signed by the current CI pipeline.
 - Provider document upload: Not implemented in mobile onboarding. The pilot must use a secure, documented manual verification process before provider approval.
 
 ## 1. Resolve the Supabase project limit
 
-A dedicated NexHelp project is required. Create it in `ap-south-1` (Mumbai) under the selected Supabase organization.
+A dedicated Kwick project is required. Create it in `ap-south-1` (Mumbai) under the selected Supabase organization.
 
 The $0/month project creation was explicitly approved, but Supabase refused because the organization has reached its free-project limit. To proceed, choose one of these actions in Supabase:
 - Delete the inactive CareerOS project (destructive; do this only if its data is no longer needed).
 - Upgrade an existing project or organization plan to a tier that permits another project (may incur recurring cost).
 
-Do not reuse JanaSetu or CareerOS for NexHelp. Do not delete or upgrade either without a separate explicit decision.
+Do not reuse JanaSetu or CareerOS for Kwick. Do not delete or upgrade either without a separate explicit decision.
 
 Once the project exists:
 1. Save the project URL, project reference, database password, and public anon/publishable key securely.
@@ -49,7 +49,7 @@ Before pilot:
 - Test upload/read/signed URL expiry and cross-user access denial with separate customer, provider, and admin accounts.
 - Do not store identity or trade documents in public buckets.
 
-## 3. Deploy NexHelp Intelligence
+## 3. Deploy Kwick Intelligence
 
 Set the Gemini key only as a Supabase Edge Function secret:
 
@@ -63,7 +63,7 @@ Verify the configured model against the current Gemini API account. Test authent
 
 ## 4. Deploy the operations console
 
-Create a separate Vercel project for repository `PSP-YN/NexHelp` with root directory `admin`.
+Create a separate Vercel project for repository `PSP-YN/Kwick` with root directory `admin`.
 
 Set:
 ```env
@@ -153,4 +153,4 @@ After the signed AAB and legal documents are ready:
 
 ## Go-live gate
 
-NexHelp is not production-ready as a full service until the dedicated Supabase project is provisioned, migrations and RLS are verified in the cloud, the AI and operations services are deployed, provider verification/support are staffed, a signed Android release passes physical-device acceptance, and privacy/terms are published. Keep the draft PR unmerged until current CI checks are green and the production blockers are resolved.
+Kwick is not production-ready as a full service until the dedicated Supabase project is provisioned, migrations and RLS are verified in the cloud, the AI and operations services are deployed, provider verification/support are staffed, a signed Android release passes physical-device acceptance, and privacy/terms are published. Keep the draft PR unmerged until current CI checks are green and the production blockers are resolved.

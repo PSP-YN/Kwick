@@ -3,7 +3,7 @@ import 'app_colors.dart';
 import 'app_spacing.dart';
 import 'app_text_styles.dart';
 
-/// Primary Material 3 theme definition for NexHelp
+/// Primary Material 3 theme definition for Kwick
 class AppTheme {
   AppTheme._();
 
@@ -14,7 +14,7 @@ class AppTheme {
         primary: AppColors.primary,
         onPrimary: AppColors.textInverse,
         secondary: AppColors.secondary,
-        onSecondary: AppColors.textInverse,
+        onSecondary: AppColors.primary,
         surface: AppColors.surface,
         onSurface: AppColors.textPrimary,
         error: AppColors.error,

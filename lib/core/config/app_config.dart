@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   AppConfig._();
 
-  static const String appName = 'NexHelp';
-  static const String appTagline = 'Trusted Local Home Services';
+  static const String appName = 'Kwick';
+  static const String appTagline = 'Quick Help. Everyday.';
 
   // Supply project-specific values with --dart-define at build/run time.
   static const String supabaseUrl = String.fromEnvironment(
@@ -47,8 +47,7 @@ class AppConfig {
   static const String pilotState = 'Karnataka';
   static const String pilotPincode = '560102';
   static const String aiConsentVersion = '2026-11-11-v1';
-  static const String pilotAreaName =
-      'Bengaluru 560102 Service Zone — HSR Layout Focus';
+  static const String pilotAreaName = 'HSR Layout, Bengaluru · 560102';
   static const String pilotAreaId = 'a0000000-0000-0000-0000-000000000001';
 
   // Seed Categories

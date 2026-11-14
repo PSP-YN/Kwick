@@ -1,5 +1,5 @@
 -- ============================================================================
--- NexHelp Database Schema Migration: 001 Initial Schema
+-- Kwick Database Schema Migration: 001 Initial Schema
 -- ============================================================================
 
 -- Ensure pgcrypto is available for UUID generation

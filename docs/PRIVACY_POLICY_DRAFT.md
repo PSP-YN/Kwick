@@ -1,4 +1,4 @@
-# NexHelp Privacy Notice — Draft for Legal Review
+# Kwick Privacy Notice — Draft for Legal Review
 
 **DRAFT — NOT APPROVED FOR PUBLICATION.** Replace every bracketed field, verify the actual deployment and data flows, and obtain Indian legal review before publishing.
 
@@ -10,11 +10,11 @@
 
 ## 1. Who we are
 
-NexHelp is a proposed digital marketplace that helps customers request plumbing and electrical services from independent service providers. The platform coordinates request intake, manual review, provider verification and job status. It is not itself a licensed electrical contractor or emergency service.
+Kwick is a proposed digital marketplace that helps customers request plumbing and electrical services from independent service providers. The platform coordinates request intake, manual review, provider verification and job status. It is not itself a licensed electrical contractor or emergency service.
 
 ## 2. Personal data we may process
 
-Depending on how you use NexHelp, we may process:
+Depending on how you use Kwick, we may process:
 
 - Account and contact details: name, email address, phone number and account identifiers.
 - Service details: issue description, selected category, service address, pincode, preferred appointment time, optional notes and booking/job history.
@@ -35,10 +35,10 @@ Optional AI triage is a separate purpose and is not required to submit a booking
 
 ## 4. Optional AI triage and Google Gemini
 
-If you actively select the AI consent checkbox, NexHelp sends the issue description and selected service-category hint to Google Gemini to generate an advisory category, urgency, safety alerts, follow-up questions and a dispatcher note.
+If you actively select the AI consent checkbox, Kwick sends the issue description and selected service-category hint to Google Gemini to generate an advisory category, urgency, safety alerts, follow-up questions and a dispatcher note.
 
 - AI triage is optional. You can submit a booking without using it.
-- NexHelp does not intentionally send your account profile, phone number, service address or booking photos to Gemini.
+- Kwick does not intentionally send your account profile, phone number, service address or booking photos to Gemini.
 - The service attempts to redact obvious phone-number, email, Aadhaar-like and PAN-like patterns. Automated redaction is not guaranteed; do not include names, addresses, identity details, health or financial information in the issue description.
 - Production AI must use a verified paid Gemini API project. Do not enable AI for real customer data on unpaid/free-tier Gemini services.
 - Google may process the submitted description under its applicable Gemini API terms and data-processing terms. Review the current terms at [Gemini API Additional Terms](https://ai.google.dev/gemini-api/terms).
@@ -51,7 +51,7 @@ The consent notice version currently recorded by the application is `2026-11-11-
 Data may be shared only as needed with:
 
 - The assigned service provider, limited to the information needed to fulfil the job.
-- Authorized NexHelp operations and support personnel.
+- Authorized Kwick operations and support personnel.
 - Supabase for authentication, database and storage services.
 - Vercel for website/operations-console hosting.
 - Google for optional AI triage when you consent.
@@ -61,7 +61,7 @@ The current product does not integrate a payment processor. If payments are intr
 
 ## 6. Hosting and transfers
 
-The intended Supabase database region for the pilot is Mumbai, India. This does not by itself prove that every service, support log, backup, AI request or third-party processing operation remains in India. NexHelp must verify and disclose the actual locations and contractual safeguards of every processor before launch. No blanket India-only data-residency promise is made in this draft.
+The intended Supabase database region for the pilot is Mumbai, India. This does not by itself prove that every service, support log, backup, AI request or third-party processing operation remains in India. Kwick must verify and disclose the actual locations and contractual safeguards of every processor before launch. No blanket India-only data-residency promise is made in this draft.
 
 ## 7. Retention
 
@@ -76,7 +76,7 @@ Expected acknowledgement and resolution timelines: [LEGAL-APPROVED TIMELINES].
 
 ## 9. Security
 
-NexHelp is implementing role-based access, row-level security, private storage, least-privilege access, server-side secrets, audit events, encrypted transport, backup and incident-response controls. No online service can guarantee absolute security. Security claims in the final notice must match independently verified controls.
+Kwick is implementing role-based access, row-level security, private storage, least-privilege access, server-side secrets, audit events, encrypted transport, backup and incident-response controls. No online service can guarantee absolute security. Security claims in the final notice must match independently verified controls.
 
 ## 10. Children
 

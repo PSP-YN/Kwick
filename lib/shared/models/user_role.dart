@@ -1,4 +1,4 @@
-/// Valid user roles in NexHelp
+/// Valid user roles in Kwick
 enum UserRole {
   customer('customer', 'Customer'),
   provider('provider', 'Service Provider'),

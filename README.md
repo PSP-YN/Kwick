@@ -1,45 +1,48 @@
-# NexHelp — Trust-First Home Services Marketplace
+# Kwick — Local Home Services Marketplace
 
-NexHelp is a trust-first home-services marketplace connecting customers with local plumbing and electrical professionals. The initial pilot is limited to the 560102 service zone, with an HSR Layout focus. Koramangala is out of scope until its separate service-area and provider coverage are configured.
+Kwick connects customers with reviewed local service professionals. The product ships as two separately installable mobile apps backed by one shared platform:
+
+- **Kwick** — customer discovery, booking, quote confirmation, order tracking and reviews.
+- **Kwick Partner** — provider onboarding, private verification-document upload, availability, job handling and provider-owned pricing.
+
+The initial seeded service area is HSR Layout, Bengaluru (560102). Plumbing and electrical are the only active service categories in the current pilot configuration. The target is 100 customers and 30 onboarded service partners, with a 2–3-neighbourhood launch; these are targets, not achieved metrics. Additional areas must not be advertised or activated until partner coverage is verified and configured.
 
 ## System components
 
-- **Public preview:** [NexHelp landing page](https://nexhelp-landing.vercel.app/) — preview deployment only, not a statement that the service is live.
+1. **Customer app:** Flutter entrypoint `lib/main_customer.dart`; Android ID `com.kwick.customer`; iOS scheme `customer`.
+2. **Partner app:** Flutter entrypoint `lib/main_provider.dart`; Android ID `com.kwick.provider`; iOS scheme `provider`.
+3. **Shared mobile domain:** Flutter/Riverpod, shared auth/backend models, feature modules, role-locked routing and a common graphite/saffron brand system.
+4. **Backend:** Supabase Auth, PostgreSQL with RLS, transactional RPCs, private Storage and Edge Functions.
+5. **Operations console:** Next.js dashboard for provider verification, manual dispatch, disputes, fixed-price review and negotiated commission terms.
+6. **Public landing page:** Static site in `landing/`; it must describe only currently configured coverage and services.
+7. **Optional AI triage:** `supabase/functions/diagnose-service/`; advisory only, never creates bookings, sets prices or dispatches providers.
 
-1. **Flutter mobile application (`lib/`):** Customer and service-provider experiences in one Android/iOS codebase.
-2. **Supabase and PostgreSQL (`supabase/`):** Authentication, RLS-protected data, transactional booking and assignment workflows, and private storage.
-3. **Operations console (`admin/`):** Protected Next.js dashboard for provider verification, manual dispatch, request tracking, and disputes.
-4. **NexHelp Intelligence (`supabase/functions/diagnose-service/`):** Optional Gemini-powered issue triage. Output is advisory; it cannot book, price, or dispatch.
-5. **Public landing page (`landing/`):** Responsive static website, separate from the authenticated operations console.
+> **Status:** This is a pre-launch product build. A passing local build or database test is not proof of a live service, verified provider supply, million-user capacity or a production payment/settlement flow.
 
-> **Release status:** Automated tests and build jobs run in GitHub Actions. Check the latest workflow for the exact branch/commit before relying on a result. A successful CI build is not proof of a live backend, a signed production binary, or an operational service area. See [REMAINING_STEPS.md](REMAINING_STEPS.md).
+## Product and commercial rules
 
-## Legal and privacy readiness
-
-The repository includes an India-specific compliance register, draft privacy notice, customer terms, provider agreement, incident response runbook, data-retention schedule and processor register. These are pre-launch drafts, not legal sign-off. The legal entity, grievance officer, contracts, age policy, provider verification and statutory processes must be completed before public operations.
-
-## Product capabilities
-
-- Customer and provider workflows in one mobile app.
-- Plumbing and electrical service requests for the planned 560102 service zone (HSR Layout focus).
-- Optional issue triage with category suggestions, urgency, safety notes, and follow-up questions.
-- Customer review of AI suggestions; no silent booking changes.
-- Provider verification and assignment constraints enforced by the database.
-- Operations dashboard backed by live database queries, not fabricated metrics.
-- RLS, least-privilege grants, private document storage, server-side AI secrets, and AAL2/TOTP enforcement for administrator data and RPCs.
+- Customer and partner apps have separate app IDs, entrypoints and role-locked route sets.
+- Provider documents are stored in a private bucket. Uploading a document does not approve the provider; an authorized operator must review it.
+- Do not collect Aadhaar biometrics, full Aadhaar numbers or Aadhaar e-KYC payloads. Confirm accepted alternative identity documents with legal counsel.
+- Provider pricing is either a job-specific quote or an agreed fixed price. Fixed prices are customer-visible only after admin approval.
+- Platform commission is a negotiated percentage per provider and service category, stored in basis points. No default rate is assumed; active terms require recorded provider agreement and admin approval.
+- No monthly partner subscription is charged during the pilot. Commission recording is not payment collection or settlement; those flows are not yet implemented.
+- All financial values are stored in integer paise. Provider commission rates use integer basis points (100 bps = 1%).
 
 ## Repository layout
 
-```
-nexhelp/
-├── android/              # Android shell and release signing configuration
-├── ios/                  # iOS Runner
-├── lib/                  # Flutter application
+```text
+Kwick/
+├── android/              # Customer/provider Android flavors
+├── ios/                  # Customer/provider Xcode schemes
+├── lib/                  # Shared Flutter source + two app entrypoints
+├── assets/branding/      # Supplied Kwick logo assets
 ├── test/                 # Flutter tests
 ├── admin/                # Next.js operations console
 ├── landing/              # Public static website
 ├── supabase/             # Migrations, Edge Functions, database tests
-└── docs/                 # Architecture, security, release and hackathon docs
+├── scripts/load/         # Staging k6 smoke/load test
+└── docs/                 # Architecture, launch, commercial and scale plans
 ```
 
 ## Prerequisites
@@ -47,32 +50,40 @@ nexhelp/
 - Flutter 3.44+ / Dart 3.12+
 - Java 17
 - Node.js 22+
-- Supabase CLI 3.1.0 (pinned in deployment CI; CLI v3 remote-target flags are used).
-- Docker Engine for local Supabase
+- Supabase CLI
+- Docker Engine for isolated PostgreSQL database tests
 
 ## Local development
 
-### 1. Start the local backend
+### 1. Start a local backend
 
 ```bash
 supabase start
 supabase db reset
 ```
 
-Copy the local Supabase API URL and anon key from `supabase status`. For Android Emulator, use `http://10.0.2.2:54321` as the API URL; for iOS Simulator use `http://127.0.0.1:54321`.
+Copy the local Supabase API URL and public anon key from `supabase status`. For Android Emulator use `http://10.0.2.2:54321`; for iOS Simulator use `http://127.0.0.1:54321`.
 
-### 2. Run the Flutter app
+### 2. Run the customer app
 
 ```bash
 flutter pub get
-flutter run \
+flutter run --flavor customer -t lib/main_customer.dart \
   --dart-define=SUPABASE_URL=http://10.0.2.2:54321 \
   --dart-define=SUPABASE_ANON_KEY=<local-anon-key>
 ```
 
-Local HTTP is accepted only in non-release builds. Production builds require an HTTPS hosted Supabase project URL and a real public anon/publishable key. If configuration is missing or invalid, the app shows a setup screen instead of crashing or silently using localhost.
+### 3. Run the partner app
 
-### 3. Validate Flutter and database
+```bash
+flutter run --flavor provider -t lib/main_provider.dart \
+  --dart-define=SUPABASE_URL=http://10.0.2.2:54321 \
+  --dart-define=SUPABASE_ANON_KEY=<local-anon-key>
+```
+
+Release builds require an HTTPS Supabase URL and a real public anon/publishable key. Never embed a service-role key or Gemini API key in either mobile app.
+
+### 4. Validate mobile and database code
 
 ```bash
 dart format --output=none --set-exit-if-changed .
@@ -81,7 +92,7 @@ flutter test
 ./supabase/tests/run_tests.sh
 ```
 
-### 4. Run the operations console
+### 5. Run the operations console
 
 ```bash
 cd admin
@@ -90,59 +101,65 @@ npm run lint
 npm run dev
 ```
 
-Configure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` before connecting it to a real backend.
+Configure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` before connecting it to a backend. Admin access requires an authorized operator session with TOTP/AAL2.
 
-### 5. Preview the public landing page
+### 6. Preview the public landing page
 
 ```bash
 cd landing
 python3 -m http.server 4173
+node validate.mjs
 ```
 
-Open `http://localhost:4173`. Validate its structure and local links with:
+Open `http://localhost:4173` and validate responsive layout, accessibility and truthful coverage copy.
+
+## Android build commands
 
 ```bash
-node landing/validate.mjs
+# Customer APK and Play Store bundle
+flutter build apk --release --flavor customer -t lib/main_customer.dart \
+  --dart-define=SUPABASE_URL=https://<project-ref>.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=<public-key>
+flutter build appbundle --release --flavor customer -t lib/main_customer.dart \
+  --dart-define=SUPABASE_URL=https://<project-ref>.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=<public-key>
+
+# Partner APK and Play Store bundle
+flutter build apk --release --flavor provider -t lib/main_provider.dart \
+  --dart-define=SUPABASE_URL=https://<project-ref>.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=<public-key>
+flutter build appbundle --release --flavor provider -t lib/main_provider.dart \
+  --dart-define=SUPABASE_URL=https://<project-ref>.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=<public-key>
 ```
 
-## Android builds
+Android package IDs are `com.kwick.customer` and `com.kwick.provider`. Both builds use the same private upload keystore but have independent app identities. Keep the keystore and passwords in a secure password manager/offline backup; never commit them.
 
-### CI debug APK
+## iOS
 
-Every successful GitHub Actions run on the feature branch uploads `nexhelp-android-debug-apk` as a 14-day artifact. This is a test build, not a production-signed release and not connected to a live backend unless configured with actual project values.
+Shared Xcode schemes are `customer` and `provider`. Build with:
 
-### Signed production release
+```bash
+flutter build ios --flavor customer -t lib/main_customer.dart
+flutter build ios --flavor provider -t lib/main_provider.dart
+```
 
-The repository includes a gated workflow at `.github/workflows/android-release.yml`. Before running it, configure these GitHub Actions secrets:
+The project is developed on Linux; Xcode compilation, signing, provisioning and TestFlight acceptance must be verified on a macOS runner before claiming iOS release readiness.
 
-- `SUPABASE_URL` — the dedicated NexHelp HTTPS project URL.
-- `SUPABASE_ANON_KEY` — the public anon/publishable key (never a service-role key).
-- `ANDROID_KEYSTORE_BASE64` — base64-encoded private upload keystore.
-- `ANDROID_KEYSTORE_PASSWORD`
-- `ANDROID_KEY_PASSWORD`
-- `ANDROID_KEY_ALIAS`
+## Documentation
 
-The workflow validates the secrets, creates temporary signing files, runs Flutter format/analyze/tests, and builds a signed APK and AAB. Temporary signing material is removed at the end of the job. Never commit a keystore or `android/key.properties`.
-
-## Deployment documentation
-
-- [Production launch checklist](REMAINING_STEPS.md)
-- [Public landing deployment](landing/README.md)
+- [Latest team decisions (14 Nov 2026)](docs/TEAM_DECISIONS_2026-11-14.md)
+- [Launch playbook](docs/KWICK_LAUNCH_PLAYBOOK.md)
+- [Commercial model and cost accounting](docs/COMMERCIAL_MODEL.md)
+- [Provider verification procedure](docs/PROVIDER_VERIFICATION.md)
+- [Scale readiness and capacity plan](docs/SCALE_READINESS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security and access control](docs/SECURITY.md)
 - [Database schema and invariants](docs/DATABASE.md)
 - [AI triage safety and privacy](docs/AI_DIAGNOSIS.md)
 - [Release guide](docs/RELEASE.md)
 - [Operations runbook](docs/OPERATIONS.md)
-- [HackGlobal submission brief](HACKGLOBAL_SUBMISSION.md)
-- [Pitch deck prompt](docs/HACKGLOBAL_PITCH_DECK_PROMPT.md)
-- [Demo video script](docs/HACKGLOBAL_DEMO_SCRIPT.md)
-
-## Project documentation
-
 - [Contributing](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Security policy](SECURITY.md)
-- [Changelog](CHANGELOG.md)
 - [License](LICENSE)
-- [Copyright](COPYRIGHT.md)

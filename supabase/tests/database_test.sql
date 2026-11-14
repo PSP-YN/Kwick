@@ -1,5 +1,5 @@
 -- ============================================================================
--- NexHelp Automated Database & Security Test Suite
+-- Kwick Automated Database & Security Test Suite
 -- ============================================================================
 
 \set ON_ERROR_STOP on
@@ -72,6 +72,10 @@ COMMIT;
 \i supabase/migrations/20261111000011_validate_booking_inputs.sql
 \i supabase/migrations/20261111000012_ai_consent_audit.sql
 \i supabase/migrations/20261111000013_require_admin_mfa.sql
+\i supabase/migrations/20261111000014_revoke_anon_admin_helper.sql
+\i supabase/migrations/20261111000015_index_foreign_key_columns.sql
+\i supabase/migrations/20261111000016_hoist_auth_rls_helpers.sql
+\i supabase/migrations/20261114000017_kwick_commercial_terms.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
@@ -95,7 +99,7 @@ DECLARE
     v_second_request_id UUID;
     v_failed BOOLEAN;
 BEGIN
-    RAISE NOTICE '>>> Starting NexHelp Automated Test Suite <<<';
+    RAISE NOTICE '>>> Starting Kwick Automated Test Suite <<<';
 
     -- ------------------------------------------------------------------------
     -- Test 1: Verify Seed Data (Pilot Area & Categories)
@@ -468,4 +472,98 @@ BEGIN
 END;
 $audit$;
 
+-- Test 16: Provider price changes are proposals, never self-approved.
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '44444444-4444-4444-4444-444444444444';
+UPDATE public.provider_services
+   SET pricing_model = 'agreed_fixed', base_price_minor = 32500
+ WHERE provider_id = (SELECT id FROM public.providers WHERE profile_id = '44444444-4444-4444-4444-444444444444');
+DO $$
+DECLARE v_provider_id UUID;
+BEGIN
+    SELECT id INTO v_provider_id FROM public.providers WHERE profile_id = '44444444-4444-4444-4444-444444444444';
+    ASSERT (SELECT price_approval_status FROM public.provider_services WHERE provider_id = v_provider_id) = 'pending',
+      'Test 16 Failed: Provider fixed-price proposal was not forced to pending';
+    UPDATE public.provider_services SET price_approval_status = 'approved' WHERE provider_id = v_provider_id;
+    ASSERT (SELECT price_approval_status FROM public.provider_services WHERE provider_id = v_provider_id) = 'pending',
+      'Test 16 Failed: Provider was able to self-approve a fixed price';
+    ASSERT (SELECT count(*) FROM public.provider_service_price_events WHERE provider_id = v_provider_id) >= 1,
+      'Test 16 Failed: Provider price change was not audited';
+END;
+$$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 16: Provider pricing proposals require operator approval and are audited'; END; $$;
+
+-- Test 17: Customers cannot see unapproved fixed prices.
+SET request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+DO $$
+BEGIN
+    ASSERT (SELECT count(*) FROM public.provider_services WHERE pricing_model = 'agreed_fixed') = 0,
+      'Test 17 Failed: Customer can see an unapproved fixed price';
+END;
+$$;
+
+-- Test 18: Only an AAL2 admin can activate commission after recording provider agreement.
+RESET ROLE;
+SET request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+SET request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated","aal":"aal2"}';
+UPDATE public.provider_services
+   SET price_approval_status = 'approved'
+ WHERE provider_id = (SELECT id FROM public.providers WHERE profile_id = '44444444-4444-4444-4444-444444444444');
+DO $$
+DECLARE v_provider_id UUID; v_category_id UUID;
+BEGIN
+    SELECT p.id, ps.category_id INTO v_provider_id, v_category_id
+      FROM public.providers p
+      JOIN public.provider_services ps ON ps.provider_id = p.id
+     WHERE p.profile_id = '44444444-4444-4444-4444-444444444444';
+    ASSERT has_function_privilege('authenticated', 'public.admin_record_provider_commission_terms(uuid,uuid,integer,boolean,text)', 'EXECUTE'),
+      'Test 18 Failed: Admin commission terms RPC is not granted to authenticated role';
+    ASSERT NOT has_function_privilege('anon', 'public.admin_record_provider_commission_terms(uuid,uuid,integer,boolean,text)', 'EXECUTE'),
+      'Test 18 Failed: Anonymous role can record commission terms';
+    PERFORM public.admin_record_provider_commission_terms(
+      v_provider_id, v_category_id, 650, true,
+      'Provider agreed in person; signed partner terms dated 14 Nov 2026.'
+    );
+END;
+$$;
+DO $$
+DECLARE v_provider_id UUID;
+BEGIN
+    SELECT id INTO v_provider_id FROM public.providers WHERE profile_id = '44444444-4444-4444-4444-444444444444';
+    ASSERT (SELECT price_approval_status FROM public.provider_services WHERE provider_id = v_provider_id) = 'approved',
+      'Test 18 Failed: Admin could not approve a fixed price';
+    ASSERT (SELECT count(*) FROM public.provider_commission_terms WHERE provider_id = v_provider_id AND status = 'active') = 1,
+      'Test 18 Failed: Active commission agreement was not saved';
+END;
+$$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 18: Admin approval and explicit provider agreement are required for active commission'; END; $$;
+
+-- Test 19: Customer can see the approved catalogue price, never the provider's commission.
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+DO $$
+BEGIN
+    ASSERT (SELECT count(*) FROM public.provider_services WHERE pricing_model = 'agreed_fixed' AND price_approval_status = 'approved') = 1,
+      'Test 19 Failed: Customer cannot see an approved fixed price';
+    ASSERT (SELECT count(*) FROM public.provider_commission_terms) = 0,
+      'Test 19 Failed: Customer can read private provider commission terms';
+END;
+$$;
+
+-- Test 20: Provider can read only its own active commission terms; no rate exists for another provider.
+SET request.jwt.claim.sub = '44444444-4444-4444-4444-444444444444';
+DO $$
+DECLARE v_provider_id UUID; v_other_provider_id UUID;
+BEGIN
+    SELECT id INTO v_provider_id FROM public.providers WHERE profile_id = '44444444-4444-4444-4444-444444444444';
+    SELECT id INTO v_other_provider_id FROM public.providers WHERE profile_id = '55555555-5555-5555-5555-555555555555';
+    ASSERT (SELECT count(*) FROM public.provider_commission_terms WHERE provider_id = v_provider_id) = 1,
+      'Test 20 Failed: Provider cannot read its own negotiated commission';
+    ASSERT (SELECT count(*) FROM public.provider_commission_terms WHERE provider_id = v_other_provider_id) = 0,
+      'Test 20 Failed: Provider can read another provider commission';
+END;
+$$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 20: Commission terms are private to the provider and admin'; END; $$;
+
+RESET ROLE;
 ROLLBACK;

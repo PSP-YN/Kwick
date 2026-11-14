@@ -1,4 +1,4 @@
-# HackGlobal Pitch Deck Prompt — NexHelp
+# HackGlobal Pitch Deck Prompt — Kwick
 
 Use this prompt in Gamma or another presentation generator. Generate a polished, judge-focused 10-slide presentation in 16:9 format.
 
@@ -6,7 +6,7 @@ Use this prompt in Gamma or another presentation generator. Generate a polished,
 
 ## Master prompt
 
-Create a premium startup/hackathon pitch deck for **NexHelp — Diagnose. Match. Resolve.**, a trust-first home-services platform with AI-assisted issue triage and accountable technician dispatch.
+Create a premium startup/hackathon pitch deck for **Kwick — Diagnose. Match. Resolve.**, a trust-first home-services platform with AI-assisted issue triage and accountable technician dispatch.
 
 ### Audience and objective
 The audience is an international hackathon judging panel evaluating originality, technical execution, real-world impact, feasibility, product quality, and entrepreneurial potential. The deck must explain the problem quickly, demonstrate a working product journey, and make the technical differentiators credible.
@@ -44,7 +44,7 @@ Show the journey: describe issue → AI triage → customer confirms → verifie
 ### 4. Product walkthrough — From a leaking sink to an accountable booking
 Use actual product screenshots. Annotate the AI issue summary, urgency, safety alerts, follow-up questions, and booking confirmation. Clearly label any missing live integration.
 
-### 5. NexHelp Intelligence — Structured triage, not an unrestricted chatbot
+### 5. Kwick Intelligence — Structured triage, not an unrestricted chatbot
 Show the structured output: suggested trade, urgency, summary, safety alerts, questions, dispatcher note, and model confidence. Explain the guardrails: no repair instructions, price promises, or autonomous booking.
 
 ### 6. Trust-aware dispatch — The right provider, not just the nearest name
@@ -60,7 +60,7 @@ Focus on the combination of issue triage, trust-aware dispatch, operational stat
 Show the impact hypotheses and how they will be measured: misrouted request rate, time from request to assignment, provider acceptance rate, completion rate, repeat usage, and dispute rate. Present a plausible local pilot and potential SaaS/marketplace revenue model without inventing results.
 
 ### 10. Roadmap and close
-Show the next steps: deploy a real Bengaluru pilot, onboard verified technicians, collect consented feedback, evaluate triage quality, expand service categories and regions. Close with: **NexHelp — Better information before dispatch. Accountability through resolution.**
+Show the next steps: deploy a real Bengaluru pilot, onboard verified technicians, collect consented feedback, evaluate triage quality, expand service categories and regions. Close with: **Kwick — Better information before dispatch. Accountability through resolution.**
 
 ### Output requirements
 - 10 slides, 16:9.

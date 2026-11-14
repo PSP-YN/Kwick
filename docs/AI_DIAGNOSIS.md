@@ -1,8 +1,8 @@
-# NexHelp Intelligence — AI Issue Triage
+# Kwick Intelligence — AI Issue Triage
 
 ## Purpose
 
-NexHelp Intelligence helps a customer describe a home-service problem and gives the dispatcher a structured, cautious first-pass assessment before assignment. It is decision support, not a professional diagnosis.
+Kwick Intelligence helps a customer describe a home-service problem and gives the dispatcher a structured, cautious first-pass assessment before assignment. It is decision support, not a professional diagnosis.
 
 ## Request flow
 
@@ -33,7 +33,7 @@ NexHelp Intelligence helps a customer describe a home-service problem and gives 
 
 ## Deployment
 
-Run from the repository root after linking the correct NexHelp Supabase project:
+Run from the repository root after linking the correct Kwick Supabase project:
 
 ```bash
 supabase secrets set GEMINI_API_KEY=your_google_ai_studio_key --yes
@@ -41,7 +41,7 @@ supabase secrets set GEMINI_MODEL=gemini-3.8-flash --yes
 # Only after verifying the API key belongs to a paid Gemini API project:
 supabase secrets set GEMINI_PAID_TIER_CONFIRMED=true --yes
 # For browser-based clients, allow exact origins only; do not use a wildcard:
-supabase secrets set NEXHELP_ALLOWED_ORIGINS=<comma-separated-exact-origins> --yes
+supabase secrets set KWICK_ALLOWED_ORIGINS=<comma-separated-exact-origins> --yes
 supabase db push --yes --remote
 supabase functions deploy diagnose-service --yes
 ```

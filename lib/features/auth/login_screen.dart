@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/config/app_config.dart';
+import '../../core/config/app_mode.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -45,6 +46,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
+    final mode = ref.watch(kwickAppModeProvider);
+    final isProviderApp = mode == KwickAppMode.provider;
     final isLoading = authState.status == AuthStatus.loading;
 
     return Scaffold(
@@ -83,7 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
-                    AppConfig.appName,
+                    mode.displayName,
                     style: AppTextStyles.displayLarge.copyWith(
                       color: AppColors.primary,
                     ),
@@ -91,7 +94,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    AppConfig.appTagline,
+                    isProviderApp
+                        ? 'Build your local service business.'
+                        : AppConfig.appTagline,
                     style: AppTextStyles.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -110,7 +115,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: AppSpacing.xs),
                           Text(
-                            'Sign in to book or manage household services',
+                            isProviderApp
+                                ? 'Sign in to manage your partner profile and service jobs.'
+                                : 'Sign in to book and manage home services.',
                             style: AppTextStyles.bodyMedium,
                           ),
                           const SizedBox(height: AppSpacing.lg),

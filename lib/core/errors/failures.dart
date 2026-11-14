@@ -1,4 +1,4 @@
-/// Domain failure classes for robust, typed error handling across NexHelp
+/// Domain failure classes for robust, typed error handling across Kwick
 abstract class Failure {
   final String message;
   final String? code;
@@ -21,7 +21,7 @@ class NetworkFailure extends Failure {
   const NetworkFailure(super.message, {super.code});
 
   factory NetworkFailure.noConnection() => const NetworkFailure(
-    'Unable to connect to NexHelp servers. Please verify your internet connection.',
+    'Unable to connect to Kwick servers. Please verify your internet connection.',
     code: 'NETWORK_UNAVAILABLE',
   );
 }

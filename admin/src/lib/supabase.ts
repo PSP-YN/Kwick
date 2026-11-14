@@ -7,7 +7,7 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 export const supabase = createClient(supabaseUrl || 'http://127.0.0.1:54321', supabaseAnonKey || 'missing-local-development-key');
 
 function assertSupabaseConfigured(): void {
-  if (!isSupabaseConfigured) throw new Error('NexHelp Operations is not connected. Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+  if (!isSupabaseConfigured) throw new Error('Kwick Operations is not connected. Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
 }
 function throwIfError(error: { message: string } | null): void {
   if (error) throw new Error(error.message);

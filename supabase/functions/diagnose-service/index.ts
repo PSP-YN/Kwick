@@ -2,7 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { redactObviousIdentifiers } from "./redaction.ts";
 
 const configuredOrigins = new Set(
-  (Deno.env.get("NEXHELP_ALLOWED_ORIGINS") || "")
+  (Deno.env.get("KWICK_ALLOWED_ORIGINS") ?? Deno.env.get("NEXHELP_ALLOWED_ORIGINS") ?? "")
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean),
@@ -69,7 +69,7 @@ Deno.serve(async (request) => {
 
   const authorization = request.headers.get("Authorization");
   if (!authorization?.startsWith("Bearer ")) {
-    return json(401, { error: "Sign in to use NexHelp Intelligence." });
+    return json(401, { error: "Sign in to use Kwick Intelligence." });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -90,7 +90,7 @@ Deno.serve(async (request) => {
     return json(503, { error: "The configured AI model identifier is invalid." });
   }
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-    return json(503, { error: "NexHelp AI service is not configured on the server." });
+    return json(503, { error: "Kwick AI service is not configured on the server." });
   }
   if (!geminiApiKey) {
     return json(503, { error: "AI diagnosis is not enabled yet. Configure the GEMINI_API_KEY secret." });
@@ -194,7 +194,7 @@ Deno.serve(async (request) => {
         },
         body: JSON.stringify({
           systemInstruction: {
-            parts: [{ text: "You are NexHelp Intelligence, a cautious home-service triage assistant. Return only schema-conforming JSON." }],
+            parts: [{ text: "You are Kwick Intelligence, a cautious home-service triage assistant. Return only schema-conforming JSON." }],
           },
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig: {
@@ -253,7 +253,7 @@ Deno.serve(async (request) => {
     !summary ||
     !dispatcherNote
   ) {
-    return json(502, { error: "The AI assessment did not meet NexHelp's safety and quality checks." });
+    return json(502, { error: "The AI assessment did not meet Kwick's safety and quality checks." });
   }
 
   return json(200, {

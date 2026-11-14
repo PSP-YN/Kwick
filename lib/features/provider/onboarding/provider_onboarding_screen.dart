@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/config/app_config.dart';
@@ -30,12 +31,91 @@ class _ProviderOnboardingScreenState
   String? _selectedCategory;
   bool _agreedToTerms = false;
   bool _isSubmitting = false;
+  PlatformFile? _identityFile;
+  PlatformFile? _tradeFile;
   String? _errorMessage;
 
   @override
   void dispose() {
     _expController.dispose();
     super.dispose();
+  }
+
+  Future<PlatformFile?> _pickVerificationFile() async {
+    final file = await FilePicker.pickFile(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
+    );
+    if (file == null) return null;
+    final fileLength = await file.length();
+    if (fileLength == null || fileLength > 10 * 1024 * 1024) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Choose a document smaller than 10 MB.'),
+          ),
+        );
+      }
+      return null;
+    }
+    final fileBytes = await file.readAsBytes();
+    if (fileBytes.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'The selected file could not be read. Try another file.',
+            ),
+          ),
+        );
+      }
+      return null;
+    }
+    return file;
+  }
+
+  String _contentTypeFor(PlatformFile file) {
+    final extension = file.extension?.toLowerCase();
+    return switch (extension) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'pdf' => 'application/pdf',
+      _ => 'application/octet-stream',
+    };
+  }
+
+  Future<void> _addDocument(String providerId, String documentType) async {
+    final file = await _pickVerificationFile();
+    if (file == null) return;
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+    try {
+      await ref
+          .read(supabaseServiceProvider)
+          .uploadProviderDocument(
+            providerId: providerId,
+            documentType: documentType,
+            fileName: file.name,
+            bytes: await file.readAsBytes(),
+            contentType: _contentTypeFor(file),
+          );
+      ref.invalidate(providerDocumentsProvider(providerId));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Document uploaded securely. It is awaiting manual review.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) setState(() => _errorMessage = error.toString());
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   Future<void> _submitOnboarding() async {
@@ -47,6 +127,13 @@ class _ProviderOnboardingScreenState
       return;
     }
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_identityFile == null) {
+      setState(
+        () => _errorMessage =
+            'Upload an accepted photo identity document to continue.',
+      );
+      return;
+    }
     if (_selectedCategory == null) {
       setState(
         () => _errorMessage = 'Please select your primary trade category.',
@@ -64,12 +151,28 @@ class _ProviderOnboardingScreenState
 
     try {
       final supabase = ref.read(supabaseServiceProvider);
-      await supabase.submitProviderOnboarding(
+      final providerId = await supabase.submitProviderOnboarding(
         userId: user.id,
         categoryId: _selectedCategory!,
         serviceAreaId: AppConfig.pilotAreaId,
         experienceYears: int.parse(_expController.text.trim()),
       );
+      await supabase.uploadProviderDocument(
+        providerId: providerId,
+        documentType: 'id_proof',
+        fileName: _identityFile!.name,
+        bytes: await _identityFile!.readAsBytes(),
+        contentType: _contentTypeFor(_identityFile!),
+      );
+      if (_tradeFile != null) {
+        await supabase.uploadProviderDocument(
+          providerId: providerId,
+          documentType: 'trade_certification',
+          fileName: _tradeFile!.name,
+          bytes: await _tradeFile!.readAsBytes(),
+          contentType: _contentTypeFor(_tradeFile!),
+        );
+      }
 
       ref.invalidate(providerProfileProvider);
       await ref.read(authControllerProvider.notifier).refreshProfile();
@@ -85,6 +188,7 @@ class _ProviderOnboardingScreenState
         );
       }
     } catch (e) {
+      ref.invalidate(providerProfileProvider);
       setState(() {
         _errorMessage = e.toString();
         _isSubmitting = false;
@@ -143,6 +247,24 @@ class _ProviderOnboardingScreenState
                               style: AppTextStyles.bodyMedium,
                               textAlign: TextAlign.center,
                             ),
+                            const SizedBox(height: AppSpacing.md),
+                            _ProviderDocumentsPanel(
+                              providerId: prov.id,
+                              isUploading: _isSubmitting,
+                              onUploadIdentity: () =>
+                                  _addDocument(prov.id, 'id_proof'),
+                              onUploadTrade: () =>
+                                  _addDocument(prov.id, 'trade_certification'),
+                            ),
+                            if (_errorMessage != null) ...[
+                              const SizedBox(height: AppSpacing.md),
+                              Text(
+                                _errorMessage!,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.error,
+                                ),
+                              ),
+                            ],
                             if (prov.verificationNotes != null) ...[
                               const SizedBox(height: AppSpacing.md),
                               Container(
@@ -191,7 +313,7 @@ class _ProviderOnboardingScreenState
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Start Earning with NexHelp',
+                      'Start Earning with Kwick',
                       style: AppTextStyles.headingLarge,
                     ),
                     const SizedBox(height: AppSpacing.xs),
@@ -290,7 +412,7 @@ class _ProviderOnboardingScreenState
                                   const SizedBox(width: AppSpacing.sm),
                                   Expanded(
                                     child: Text(
-                                      'Bengaluru South (HSR & Koramangala • 560102)',
+                                      'HSR Layout, Bengaluru • 560102',
                                       style: AppTextStyles.bodyMedium,
                                     ),
                                   ),
@@ -334,10 +456,45 @@ class _ProviderOnboardingScreenState
                                   ),
                                   const SizedBox(height: AppSpacing.xs),
                                   Text(
-                                    'Our field supervisor will verify your Govt ID proof and trade experience before assigning real customer jobs.',
+                                    'Kwick reviews identity, trade competence, local references and service-area fit before activating a partner. A field skills check may be required.',
                                     style: AppTextStyles.bodySmall,
                                   ),
                                 ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            _DocumentPickerTile(
+                              title: 'Identity proof',
+                              subtitle:
+                                  _identityFile?.name ??
+                                  'Required · JPG, PNG or PDF · max 10 MB',
+                              isSelected: _identityFile != null,
+                              onTap: () async {
+                                final file = await _pickVerificationFile();
+                                if (file != null) {
+                                  setState(() => _identityFile = file);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            _DocumentPickerTile(
+                              title: 'Trade certificate (optional)',
+                              subtitle:
+                                  _tradeFile?.name ??
+                                  'Optional · practical skills check may be used instead',
+                              isSelected: _tradeFile != null,
+                              onTap: () async {
+                                final file = await _pickVerificationFile();
+                                if (file != null) {
+                                  setState(() => _tradeFile = file);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'Do not upload Aadhaar cards, full Aadhaar numbers, biometric data or Aadhaar e-KYC files. Kwick will confirm accepted alternative identity documents during onboarding.',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
                               ),
                             ),
                             const SizedBox(height: AppSpacing.md),
@@ -349,7 +506,7 @@ class _ProviderOnboardingScreenState
                               onChanged: (val) =>
                                   setState(() => _agreedToTerms = val ?? false),
                               title: Text(
-                                'I agree to the NexHelp Partner Terms of Service and consent to background checks.',
+                                'I agree to the Kwick Partner Terms of Service and consent to identity and trade-competency checks. Aadhaar numbers, biometrics and Aadhaar e-KYC data are not required.',
                                 style: AppTextStyles.bodySmall,
                               ),
                               controlAffinity: ListTileControlAffinity.leading,
@@ -376,6 +533,155 @@ class _ProviderOnboardingScreenState
           loading: () => const LoadingIndicator(),
           error: (e, _) => Center(child: Text('Error: $e')),
         ),
+      ),
+    );
+  }
+}
+
+class _DocumentPickerTile extends StatelessWidget {
+  const _DocumentPickerTile({
+    required this.title,
+    required this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+  final String title;
+  final String subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton.icon(
+    onPressed: onTap,
+    icon: Icon(
+      isSelected ? Icons.check_circle : Icons.upload_file,
+      color: isSelected ? AppColors.success : AppColors.primary,
+    ),
+    label: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+        ),
+        Text(
+          subtitle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.bodySmall,
+        ),
+      ],
+    ),
+    style: OutlinedButton.styleFrom(
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.all(14),
+      foregroundColor: AppColors.textPrimary,
+      side: BorderSide(
+        color: isSelected ? AppColors.success : AppColors.border,
+      ),
+    ),
+  );
+}
+
+class _ProviderDocumentsPanel extends ConsumerWidget {
+  const _ProviderDocumentsPanel({
+    required this.providerId,
+    required this.isUploading,
+    required this.onUploadIdentity,
+    required this.onUploadTrade,
+  });
+  final String providerId;
+  final bool isUploading;
+  final VoidCallback onUploadIdentity;
+  final VoidCallback onUploadTrade;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final documents = ref.watch(providerDocumentsProvider(providerId));
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: AppSpacing.roundedMd,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Verification documents', style: AppTextStyles.headingSmall),
+          const SizedBox(height: AppSpacing.sm),
+          documents.when(
+            data: (items) => items.isEmpty
+                ? Text(
+                    'No documents uploaded yet.',
+                    style: AppTextStyles.bodySmall,
+                  )
+                : Column(
+                    children: items
+                        .map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.description_outlined,
+                                  size: 17,
+                                  color: AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    (item['document_type'] as String)
+                                        .replaceAll('_', ' '),
+                                    style: AppTextStyles.bodySmall,
+                                  ),
+                                ),
+                                Text(
+                                  (item['verification_status'] as String)
+                                      .replaceAll('_', ' '),
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color:
+                                        item['verification_status'] ==
+                                            'approved'
+                                        ? AppColors.success
+                                        : AppColors.warning,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+            loading: () => const LinearProgressIndicator(),
+            error: (error, stack) => Text(
+              'Could not load document status: $error',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: isUploading ? null : onUploadIdentity,
+                icon: const Icon(Icons.badge_outlined),
+                label: const Text('Add identity proof'),
+              ),
+              OutlinedButton.icon(
+                onPressed: isUploading ? null : onUploadTrade,
+                icon: const Icon(Icons.workspace_premium_outlined),
+                label: const Text('Add trade proof'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Files are private. Uploading does not mean you are verified; an operator must review them.',
+            style: AppTextStyles.bodySmall,
+          ),
+        ],
       ),
     );
   }

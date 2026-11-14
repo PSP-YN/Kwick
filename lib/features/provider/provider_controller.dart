@@ -23,3 +23,21 @@ final providerAssignmentsProvider = FutureProvider<List<Assignment>>((
   final supabase = ref.watch(supabaseServiceProvider);
   return supabase.getProviderAssignments(provider.id);
 });
+
+final providerDocumentsProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>((
+      ref,
+      providerId,
+    ) async {
+      final supabase = ref.watch(supabaseServiceProvider);
+      return supabase.getProviderDocuments(providerId);
+    });
+
+final providerServicesProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>((
+      ref,
+      providerId,
+    ) async {
+      final supabase = ref.watch(supabaseServiceProvider);
+      return supabase.getProviderServices(providerId);
+    });

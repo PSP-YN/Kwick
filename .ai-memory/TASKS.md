@@ -2,7 +2,7 @@
 Keep at most 15 entries; move older ones to TASKS.archive.md.
 
 ## Current goal
-- NexHelp complete end-to-end production implementation delivered across Flutter mobile, PostgreSQL backend, and Next.js admin dashboard.
+- Kwick complete end-to-end production implementation delivered across Flutter mobile, PostgreSQL backend, and Next.js admin dashboard.
 
 ## Log
 - 2026-10-23: Phase 2 through Phase 9 completed. Delivered full Flutter mobile client (Customer + Provider journeys with Riverpod 3 + GoRouter), Next.js 16 operations dashboard (`admin/` with live dispatch queue, verification audit & emergency overrides), Android hardening (`AndroidManifest.xml` permissions & cleartext config), and 40 automated Flutter unit/widget tests + 10 database tests + Next.js Turbopack build. Verification: `flutter analyze` 0 issues, `flutter test` 40/40 passed, `./supabase/tests/run_tests.sh` 10/10 passed, `npm --prefix admin run lint && npm --prefix admin run build` passed, `./gradlew tasks --dry-run` passed.

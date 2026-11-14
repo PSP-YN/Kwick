@@ -1,4 +1,4 @@
-# NexHelp Security Incident Response Runbook
+# Kwick Security Incident Response Runbook
 
 **Status: PRE-LAUNCH DRAFT.** Assign named primary/alternate incident commanders and an India-based CERT-In point of contact before launch.
 

@@ -7,7 +7,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utilities/date_formatter.dart';
 import '../../../shared/models/assignment.dart';
 import '../../../shared/models/provider_profile.dart';
-import '../../../shared/models/user_role.dart';
 import '../../../shared/services/supabase_service.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/error_state_view.dart';
@@ -59,19 +58,18 @@ class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Partner Dashboard'),
-        actions: [
-          if (user?.roles.contains(UserRole.customer) ?? false)
-            TextButton.icon(
-              onPressed: () {
-                ref
-                    .read(authControllerProvider.notifier)
-                    .switchActiveRole(UserRole.customer);
-                context.go('/customer/home');
-              },
-              icon: const Icon(Icons.swap_horiz, size: 18.0),
-              label: const Text('Customer Mode'),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/branding/kwick_mark.png',
+              width: 30,
+              height: 30,
             ),
+            const SizedBox(width: 8),
+            const Text('Kwick Partner'),
+          ],
+        ),
+        actions: [
           IconButton(
             icon: const Icon(Icons.logout_outlined),
             onPressed: () =>
@@ -202,6 +200,12 @@ class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  OutlinedButton.icon(
+                    onPressed: () => context.push('/provider/pricing'),
+                    icon: const Icon(Icons.currency_rupee),
+                    label: const Text('Manage Services & Pricing'),
+                  ),
                   const SizedBox(height: AppSpacing.lg),
 
                   // Job Assignments List
@@ -329,7 +333,7 @@ class _OfferedJobBanner extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'A customer booking matching your trade has been assigned to you by NexHelp dispatch.',
+            'A customer booking matching your trade has been assigned to you by Kwick dispatch.',
             style: AppTextStyles.bodyMedium,
           ),
           const SizedBox(height: AppSpacing.md),

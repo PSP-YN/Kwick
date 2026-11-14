@@ -1,5 +1,5 @@
 -- ============================================================================
--- NexHelp Database Schema Migration: 002 Row-Level Security (RLS)
+-- Kwick Database Schema Migration: 002 Row-Level Security (RLS)
 -- ============================================================================
 
 -- Enable RLS on ALL tables

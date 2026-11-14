@@ -4,7 +4,7 @@
 - **Libraries/services detected:** Riverpod, GoRouter, Supabase Flutter, Flutter Secure Storage, FCM, Tailwind CSS.
 - **Package manager:** `flutter pub` (mobile) / `npm` (admin dashboard)
 - **Entry points:** `lib/main.dart` (mobile), `admin/src/app/page.tsx` (admin web), `supabase/migrations/` (database)
-- **Users and environments:** Customers (homeowners, tenants), Service Providers (plumbers, electricians), NexHelp Dispatch Operators (internal admin). Local (Docker/Supabase emulator), Staging, Production.
+- **Users and environments:** Customers (homeowners, tenants), Service Providers (plumbers, electricians), Kwick Dispatch Operators (internal admin). Local (Docker/Supabase emulator), Staging, Production.
 
 ## Commands
 - Flutter analyze: `flutter analyze`
