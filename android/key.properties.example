@@ -2,5 +2,5 @@
 # Keep key.properties and the referenced keystore out of version control.
 storePassword=REPLACE_WITH_UPLOAD_KEYSTORE_PASSWORD
 keyPassword=REPLACE_WITH_UPLOAD_KEY_PASSWORD
-keyAlias=nexhelp-upload
+keyAlias=REPLACE_WITH_CONFIGURED_UPLOAD_KEY_ALIAS
 storeFile=upload-keystore.jks

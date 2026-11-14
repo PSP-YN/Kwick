@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CONTAINER_NAME="nexhelp_db_test_$$"
+CONTAINER_NAME="kwick_db_test_$$"
 PORT=54329
 PASSWORD="testpassword123"
 

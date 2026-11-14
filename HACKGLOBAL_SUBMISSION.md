@@ -1,122 +1,87 @@
-# HackGlobal 2026 — NexHelp Submission Brief
+# HackGlobal 2026 — Kwick Submission Brief
 
 ## Project title
 
-**NexHelp — Diagnose. Match. Resolve.**
+**Kwick — Trust-first home services, from request to resolution**
 
 ## One-line pitch
 
-A trust-first home-services platform that uses AI to triage household repair issues, then connects customers with verified, available technicians through accountable dispatch workflows.
+A hyperlocal home-services marketplace with separate customer and provider apps, database-enforced trust boundaries, and an operations workflow for provider verification and accountable dispatch.
 
-## Track
+## Track positioning
 
-Open Innovation (primary), with strong Artificial Intelligence and Social Impact alignment.
+Open Innovation, with alignment to Social Impact and applied AI. AI-assisted issue triage is an optional extension, not a prerequisite for booking and not currently enabled in the live Kwick environment.
 
 ## Problem
 
-When a household faces a plumbing or electrical issue, the customer often does not know:
-- Which trade is appropriate.
-- Whether the issue is routine or potentially urgent.
-- What information a technician needs before arriving.
-- Whether a service provider is verified, qualified, and available.
-- What happened to the request after it was submitted.
-
-Existing informal discovery and booking flows leave diagnosis, provider trust, dispatch, and accountability fragmented.
+When a household needs a plumber or electrician, customers often struggle to identify the right service, assess provider trust, explain the issue clearly, and understand what happens after requesting help. Informal discovery and messaging-based coordination fragment provider checks, job assignment, status updates, and accountability.
 
 ## Solution
 
-NexHelp combines a Flutter customer/provider application, a secure Supabase/PostgreSQL backend, and a Next.js operations console.
+Kwick provides two distinct mobile experiences backed by one role-isolated platform:
 
-NexHelp Intelligence accepts a short issue description and returns a structured, cautious triage assessment: likely category, urgency, summary, safety alerts, follow-up questions, and a dispatcher note. The customer reviews the suggestion and decides whether to submit a booking. The operations team then assigns a verified provider with the correct trade skill and availability.
+- **Kwick Customer:** service discovery, customer accounts, service requests, quote review, request tracking, and reviews.
+- **Kwick Partner:** provider onboarding, service/pricing management, assigned-job visibility, and controlled job progression.
+- **Kwick Operations:** provider verification, manual dispatch, dispute handling, fixed-price approval, and provider-specific commission agreements.
 
-The service lifecycle is recorded through transactional database functions and an audit trail.
+The backend uses Supabase Auth and PostgreSQL as the authority for identity, ownership, authorization, and transactional state. RLS, FORCE RLS, constraints, and transactional RPCs enforce the customer/provider boundary independently of the mobile UI.
 
 ## What is differentiated
 
-1. **Triage before dispatch:** AI structures the issue before a technician is assigned.
-2. **Safety-first boundaries:** The model does not provide repair instructions or price promises; emergency warnings are conservative and explicit.
-3. **Trust-aware dispatch:** Only approved, available providers with the required service category can be assigned.
-4. **Operational accountability:** Booking state changes run through transactional RPCs and append-only event records.
-5. **Security by design:** Supabase Auth, row-level security, column-level write privileges, server-side AI secrets, and a role-protected operations console.
-6. **Practical fallback:** Booking remains usable when the AI provider is unavailable or the customer chooses not to use AI.
+1. **Two separate products:** customer and provider apps have distinct Android identities, build entrypoints, and role-specific navigation.
+2. **Database-enforced trust:** customer/provider roles are mutually exclusive; customer booking creation, provider job access, and status transitions are checked at the database layer.
+3. **Verification before dispatch:** a provider is not dispatch-eligible merely because they registered or uploaded information; an operator must approve them.
+4. **Operational accountability:** booking, assignment, pricing, and audit events use server-side transactional workflows.
+5. **Commercial flexibility:** provider quotes and approved negotiated fixed prices are supported; commission is provider/category-specific and requires recorded agreement.
+6. **Optional AI with boundaries:** a future/optional triage function is designed to return advisory issue context only. It cannot book, dispatch, set prices, or change job status.
 
-## Core user journey
+## Architecture
 
-1. Customer signs in and selects plumbing or electrical service.
-2. Customer describes the issue.
-3. NexHelp Intelligence suggests a category, urgency, safety guidance, and questions.
-4. Customer reviews the advice and submits the request.
-5. Operations sees the request and AI triage notes.
-6. Dispatcher assigns a verified and available technician.
-7. Provider accepts, progresses, and completes the job.
-8. Customer submits a review.
+See the root [README architecture diagram](README.md#architecture) and [detailed architecture notes](docs/ARCHITECTURE.md). The implemented platform consists of Flutter customer/provider apps, a Next.js operations console, Supabase Auth, PostgreSQL/RLS, private Storage, and authenticated Edge Functions.
 
-## Technology
+## Current implementation and honest status
 
-- Flutter / Dart — Android and iOS customer/provider application.
-- Supabase Auth — identity and sessions.
-- PostgreSQL — authoritative application state, constraints, RLS, transactional RPCs, and audit records.
-- Supabase Edge Functions — authenticated server-side AI gateway.
-- Gemini API — structured issue triage.
-- Next.js / TypeScript — role-protected operations console.
-- GitHub Actions — Flutter, database, admin build, and Edge Function validation.
+- Customer and provider Flutter entrypoints and Android application IDs are implemented.
+- The shared Supabase project is in Mumbai (`ap-south-1`); database migrations through `20261114172825` have been applied and live role/RLS checks were performed.
+- All 18 public tables have RLS and FORCE RLS enabled. Public RPC entrypoints are SECURITY INVOKER wrappers; privileged implementation routines are in a non-exposed private schema.
+- Local validation previously completed: Flutter analyzer (0 issues), 40 Flutter tests, 30 database tests, admin lint/build, dependency audit (0 vulnerabilities), landing validator (33 checks), and Edge Function type/redaction tests (3 tests). Re-run before final submission if the code changes.
+- Android debug APKs were built for `com.kwick.customer` and `com.kwick.provider`; they are not signed store-release artifacts and have not passed physical-device acceptance.
+- No Kwick administrator has been provisioned; admin MFA acceptance and stable production promotion remain open.
+- AI diagnosis remains fail-closed until a Kwick-specific model key and explicit data-processing approval are configured.
+- Encrypted local logical backups and a daily local timer exist; off-site backup and restore-drill gates remain open.
+- GitHub Actions was previously blocked before job steps started by an account/repository spending restriction. Do not claim CI passed unless a new run completes successfully.
+- The project has not completed production load/soak/failover tests or validated million-user capacity.
+- **Vultr is not currently part of the deployed Kwick infrastructure.** Do not claim Vultr usage in a Vultr Showcase submission until an actual component is deployed there and verified.
 
-## Security and responsible AI
+## Initial pilot and impact hypothesis
 
-- No Gemini API key in the client.
-- The AI function requires an authenticated user.
-- Raw issue descriptions are not stored in the AI usage audit table.
-- The AI result is advisory and requires customer review.
-- The model cannot book, dispatch, set prices, or change service status.
-- Booking and dispatch remain controlled by server-side authorization and database constraints.
+The initial configured service zone is HSR Layout, Bengaluru (560102), with plumbing and electrical categories. The operating plan targets 2–3 neighbourhoods, 100 customers, and 30 service providers. These are future targets, not current users, verified providers, or traction metrics.
 
-## Impact hypothesis
+Kwick aims to make service requests clearer, reduce misrouted work, improve provider eligibility checks, and give customers a traceable service journey. No impact reduction or adoption outcome is claimed until measured in a real pilot.
 
-NexHelp aims to reduce misrouted service requests, improve the quality of information available to technicians, make provider selection more transparent, and provide customers with a traceable service journey.
+## Three-minute demonstration
 
-Do not claim measured reductions or customer adoption until those outcomes are instrumented and observed in a real pilot.
+1. **0:00–0:25 — Product split:** show the Kwick Customer and Kwick Partner app identities.
+2. **0:25–1:05 — Customer request:** demonstrate sign-in and a service request using a clearly labelled test account.
+3. **1:05–1:40 — Operations:** show the operations queue and explain provider review and manual dispatch boundaries. Do not invent a live admin account if one is not provisioned.
+4. **1:40–2:20 — Provider workflow:** show provider onboarding and assigned-job screens using test data, clearly labelled as test data.
+5. **2:20–2:50 — Security:** show the architecture diagram and explain RLS, role separation, private storage, and transactional state changes.
+6. **2:50–3:00 — Roadmap:** explain pilot coverage and the remaining deployment/device/operations gates.
 
-## Three-minute demo plan
+If AI triage is not enabled in the environment being demonstrated, do not simulate a live model response or claim that AI is operational.
 
-**0:00–0:30 — Problem**
-Show a customer who has a leaking sink and is unsure what service to book.
+## Links
 
-**0:30–1:10 — AI triage**
-Enter the issue description. Show the suggested trade, urgency, safety guidance, and follow-up questions. Emphasize that the customer remains in control.
+- Repository: https://github.com/PSP-YN/Kwick (currently private; make it public or grant reviewer access before relying on it for judging).
+- Architecture: [README architecture section](README.md#architecture).
+- Demo and deployment URLs: add only after confirming the live URL and testing the deployed experience.
 
-**1:10–1:45 — Booking**
-Submit the request and show the booking confirmation and stored dispatcher notes.
+## Submission integrity checklist
 
-**1:45–2:25 — Dispatch**
-Open the operations console, review the issue and triage notes, and assign a verified available plumber.
-
-**2:25–2:50 — Resolution**
-Show provider acceptance, job progression, completion, and customer review.
-
-**2:50–3:00 — Differentiator**
-Show RLS/transactional dispatch guarantees and the audit trail.
-
-## Demo integrity
-
-- Use clearly labelled demo accounts and demo requests.
-- Do not present seeded/test records as real customers, real completed jobs, or market traction.
-- Show the AI function working against the configured model; do not substitute a canned response and call it live AI.
-- If Gemini is unavailable, explain the optional fallback and continue the non-AI booking flow.
-
-## Current public links and implementation status
-
-- Source repository: https://github.com/PSP-YN/NexHelp
-- Working branch / implementation PR: https://github.com/PSP-YN/NexHelp/pull/2
-- Public landing page: https://nexhelp-landing.vercel.app/
-- The landing page is a public product overview, not a functional booking demo.
-- A dedicated NexHelp Supabase project is still blocked by the organization free-project limit. Do not claim live authentication, live Gemini calls, real bookings, live dispatch, or real pilot providers until the backend and operational setup are deployed and verified.
-- The Android CI debug build is a test artifact. A signed production APK/AAB requires a live NexHelp project and private signing secrets.
-
-## Final submission checklist
-
-- Publicly accessible GitHub repository or approved public project link.
-- Deployed demo URL with test credentials if required by the platform.
-- Short demo video with no private credentials visible.
-- Architecture diagram and concise problem/solution description.
-- Clear installation and environment setup instructions.
-- Confirm submission on Vultr Community before the HackGlobal deadline: 15 November 2026, 12:00 PM IST.
+- [ ] Repository visibility/access checked for judges.
+- [ ] Real customer and provider app screenshots captured from running builds.
+- [ ] Architecture screenshot captured from the rendered Mermaid diagram.
+- [ ] Live demo URL tested, or clearly label the project as a build/demo rather than a live service.
+- [ ] No secrets, personal data, real identity documents, or private customer information visible in screenshots/video.
+- [ ] All test accounts and seeded data labelled as test/demo data.
+- [ ] Vultr services/region described only if actually used and verified.

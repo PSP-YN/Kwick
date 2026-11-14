@@ -122,7 +122,7 @@ BEGIN
     -- Setup Test Users
     -- ------------------------------------------------------------------------
     INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES
-        (v_admin_id, 'admin@nexhelp.com', jsonb_build_object('full_name', 'Platform Admin', 'initial_role', 'customer')),
+        (v_admin_id, 'admin@kwick.test', jsonb_build_object('full_name', 'Platform Admin', 'initial_role', 'customer')),
         (v_customer_a_id, 'customer.a@test.com', jsonb_build_object('full_name', 'Customer Alice', 'initial_role', 'customer')),
         (v_customer_b_id, 'customer.b@test.com', jsonb_build_object('full_name', 'Customer Bob', 'initial_role', 'customer')),
         (v_provider_user_id, 'plumber.rajesh@test.com', jsonb_build_object('full_name', 'Rajesh Kumar', 'initial_role', 'provider')),

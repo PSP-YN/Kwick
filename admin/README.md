@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kwick Operations Console
 
-## Getting Started
+The Kwick Operations Console is the internal Next.js application used to review service providers, coordinate job dispatch, handle disputes, and approve fixed pricing and provider-specific commission terms.
 
-First, run the development server:
+## Local development
+
+```bash
+npm ci
+cp .env.local.example .env.local
+```
+
+Set the following values in `.env.local` using the intended Supabase environment:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<public-anon-or-publishable-key>
+```
+
+Then run:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Access and security
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- This is an operator interface, not a customer-facing dashboard.
+- Only a provisioned administrator may perform administrative actions.
+- Administrative database operations require AAL2/TOTP MFA and database-side authorization.
+- The browser receives only the public Supabase key. Never add a service-role key, database password, or AI-provider key to `NEXT_PUBLIC_*` variables.
+- Provider documents remain in private Storage; use short-lived authorized access rather than public URLs.
+- Production logs must not include tokens, OTPs, identity-document contents, or raw request payloads.
 
-## Learn More
+## Current status
 
-To learn more about Next.js, take a look at the following resources:
+The application passes local lint and production-build checks. A first Kwick administrator has not yet been provisioned, MFA acceptance has not been completed, and the stable production deployment has not been promoted. Do not treat a successful local build as evidence of production readiness.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See the root [architecture](../docs/ARCHITECTURE.md), [security operations](../docs/PRODUCTION_SECURITY_OPERATIONS.md), and [release guide](../docs/RELEASE.md).

@@ -1,88 +1,117 @@
 # Kwick Architecture
 
-## 1. Platform overview
+This document describes the implemented Kwick platform and its current deployment boundaries. The root [README](../README.md#architecture) contains the compact architecture diagram intended for repository visitors and hackathon screenshots.
 
-Kwick is a local home-services marketplace with two separate mobile applications and a shared transactional backend.
+## 1. System context
 
-- **Kwick customer app** — `lib/main_customer.dart`, Android `com.kwick.customer`, iOS scheme `customer`.
-- **Kwick Partner app** — `lib/main_provider.dart`, Android `com.kwick.provider`, iOS scheme `provider`.
-- **Operations console** — protected Next.js application for provider review, dispatch, disputes, fixed-price approvals and commission agreements.
-- **Supabase** — Auth, PostgreSQL/RLS, private Storage and Edge Functions.
-- **Optional AI triage** — advisory only; it cannot create bookings, quote prices or dispatch providers.
+Kwick is a hyperlocal home-services marketplace with separate customer and provider mobile applications, a protected operations console, a public information site, and one shared transactional backend.
 
-The apps share domain models, services, themes and backend APIs, but have distinct entrypoints, install IDs and route sets. The app mode is fixed at build time; a customer app session cannot navigate to provider-only screens and vice versa.
+| Component | Runtime | Identity / entrypoint |
+|---|---|---|
+| Customer app | Flutter | `lib/main_customer.dart`; Android `com.kwick.customer`; iOS scheme `customer` |
+| Partner app | Flutter | `lib/main_provider.dart`; Android `com.kwick.provider`; iOS scheme `provider` |
+| Operations console | Next.js 16 / TypeScript | `admin/`; administrator session and AAL2/MFA for privileged operations |
+| Landing site | Static HTML/CSS/JS | `landing/`; public product information, not a booking API |
+| Backend | Supabase | Auth, PostgreSQL, Storage, Edge Functions; existing project in Mumbai (`ap-south-1`) |
+
+The two mobile apps share domain models, services, UI components, and backend APIs, but have distinct app IDs, build entrypoints, and role-locked routes. App mode is fixed at build time. A customer build cannot navigate into provider-only screens and vice versa; PostgreSQL authorization independently enforces the data boundary.
+
+## 2. Request path and trust boundaries
 
 ```mermaid
 flowchart TB
-  C[Kwick Customer App\ncom.kwick.customer] --> API[Supabase HTTPS APIs / RPC]
-  P[Kwick Partner App\ncom.kwick.provider] --> API
-  O[Operations Console\nAAL2 admin] --> API
-  API --> AUTH[Supabase Auth]
-  API --> DB[(PostgreSQL + RLS)]
-  API --> STORE[Private Storage]
-  API --> EDGE[Edge Functions]
-  EDGE --> AI[Optional AI provider]
+  subgraph Apps[Untrusted client surfaces]
+    Customer[Customer Flutter app]
+    Partner[Partner Flutter app]
+    Admin[Next.js operations console]
+  end
+  subgraph Supabase[Supabase project · ap-south-1]
+    Auth[Supabase Auth]
+    Rest[HTTPS API / PostgREST]
+    RLS[(PostgreSQL + RLS / FORCE RLS)]
+    Tx[Transactional RPC entrypoints]
+    Priv[Private schema routines]
+    Files[Private Storage buckets]
+    Edge[JWT-protected Edge Functions]
+  end
+  Customer --> Auth
+  Partner --> Auth
+  Admin --> Auth
+  Customer --> Rest
+  Partner --> Rest
+  Admin --> Rest
+  Rest --> RLS
+  Rest --> Tx
+  Tx --> RLS
+  Tx --> Priv
+  Rest --> Files
+  Customer -. optional authenticated triage .-> Edge
 ```
 
-## 2. Mobile application structure
+All clients are treated as untrusted. The public Supabase key identifies the project but does not grant elevated privileges. PostgreSQL policies, constraints, and function authorization are the security boundary.
+
+## 3. Mobile application structure
 
 ```text
 lib/
-├── main.dart                 # Shared bootstrap and default customer entrypoint
+├── main.dart                 # Shared bootstrap / default entrypoint
 ├── main_customer.dart        # Customer application entrypoint
 ├── main_provider.dart        # Partner application entrypoint
-├── app.dart                  # Shared MaterialApp shell
+├── app.dart                  # Shared app shell
 ├── core/
-│   ├── config/app_mode.dart  # Compile-time customer/provider role boundary
-│   ├── config/app_config.dart
-│   ├── routing/              # Role-specific route table and auth guards
-│   ├── theme/                # Graphite/saffron Kwick design tokens
-│   ├── validation/
-│   └── security/
+│   ├── config/                # App mode and runtime configuration
+│   ├── routing/               # Role-specific route tables and guards
+│   ├── theme/                 # Kwick design tokens
+│   ├── validation/            # Input validation
+│   ├── logging/               # Sanitized structured logging
+│   └── utilities/             # Formatting and shared utilities
 ├── shared/
-│   ├── models/
-│   ├── services/             # Supabase client wrapper
-│   └── widgets/
+│   ├── models/                # Shared domain models
+│   ├── services/              # Supabase client/service boundary
+│   └── widgets/               # Reusable UI components
 └── features/
-    ├── auth/                 # Shared auth UI with app-mode-specific copy
-    ├── customer/             # Discovery, booking, order history, reviews
-    └── provider/             # Onboarding, private document upload, jobs, pricing
+    ├── auth/                  # Shared auth flow with app-mode checks
+    ├── customer/              # Booking, history, reviews, support
+    └── provider/              # Onboarding, pricing, assignments
 ```
 
-The provider app uploads identity/trade evidence to a private bucket and creates pending review records. Upload success is not provider approval. An operator must review the evidence and approve the provider before dispatch eligibility is granted.
+Provider onboarding and document submission do not imply approval. The operator verification process is a separate state transition. Fixed-price proposals remain pending until administrator approval.
 
-The partner pricing screen supports provider-set job quotes and proposed fixed prices. A provider-submitted fixed price is forced to `pending`; only an administrator can approve it. Provider/category commission terms are separately visible to the provider and cannot be changed by the customer app.
+## 4. Backend data and invariants
 
-## 3. Backend and transactional invariants
+- `auth.users` is the identity anchor. `profiles` stores profile information; `user_roles` records the account role.
+- Customer and provider roles are mutually exclusive for one identity.
+- Customer booking creation is restricted to customer-role accounts and customer-owned requests.
+- Providers can access and progress only their own approved/assigned jobs.
+- Provider approval, service eligibility, assignment ownership, and valid status transitions are checked in PostgreSQL.
+- RLS and FORCE RLS are enabled across the public application tables.
+- Customer reads are scoped to customer-owned records; provider reads are scoped to provider-owned/assigned records.
+- Public RPCs are SECURITY INVOKER wrappers. Privileged SECURITY DEFINER implementations are held in the non-exposed `private` schema.
+- Admin operations require database-side admin authorization and AAL2/MFA.
+- Provider verification files and request photos are in private Storage buckets with scoped policies and temporary signed access.
+- Monetary amounts are integer paise. Commission uses integer basis points (100 bps = 1%).
+- Price proposals and commission terms are auditable. No default commission rate is assumed.
 
-- `auth.users` is the identity anchor. `profiles` stores account data; `user_roles` stores customer/provider/admin roles.
-- RLS scopes customer records to the customer, provider data to the provider and operational actions to an AAL2 administrator.
-- Booking and assignment state transitions are enforced through PostgreSQL RPCs, not client-side optimistic status changes.
-- Partial unique indexes prevent overlapping active assignments for a request and provider.
-- All monetary values are integer paise. Commission is integer basis points (100 bps = 1%).
-- Provider price proposals and approvals are append-audited. Commission terms are provider/category-specific, with no global default. An active commission term requires provider agreement evidence and admin approval.
-- Customers can read only approved fixed catalogue prices. They cannot read private provider commission terms.
-- Provider documents live in a private bucket with user-scoped paths and short-lived admin signed URLs.
+## 5. Optional AI triage boundary
 
-## 4. Pricing and revenue model
+`supabase/functions/diagnose-service/` is an authenticated server-side gateway. It validates the caller and input, applies usage controls, and can call a configured AI provider. The response is advisory and must be reviewed by the customer. The function does not create bookings, assign providers, set prices, or update job status. The Kwick-specific AI key is not currently configured; the function fails closed until explicit configuration and data-processing approval.
 
-Two service pricing modes are supported:
+## 6. Operations and provider verification
 
-1. `provider_quote`: the provider prices the job after assessing scope.
-2. `agreed_fixed`: a fixed price negotiated with the provider and approved by operations before customer display.
+The operations console supports provider document review, approval/rejection with audit notes, manual dispatch, dispute handling, fixed-price approval, and provider/category commission agreement recording. Provider verification should cover identity, reachability, trade competence, references, service-area fit, applicable licences, and a supervised pilot period. Do not request Aadhaar biometrics, full Aadhaar numbers, or Aadhaar e-KYC payloads.
 
-Kwick commission is not a hard-coded percentage. It is negotiated for each provider and service category. Draft terms are non-active. No monthly partner subscription is charged during the pilot. The current code records pricing and commission agreements but does not collect customer payments, deduct commission or settle provider payouts.
+## 7. Deployment and operational topology
 
-## 5. Operations and provider verification
+- Existing Supabase project: Mumbai (`ap-south-1`).
+- The admin and landing projects have deployment configuration, but stable production promotion and full authenticated acceptance are not complete.
+- The current local encrypted backup timer is laptop-dependent. No off-site destination or successful restore drill is recorded.
+- No custom Kwick load balancer, read replica, durable queue, or multi-region write topology is configured.
+- Vultr is not currently part of the deployed Kwick architecture.
 
-The operations console supports provider document review, approval/rejection with audit notes, manual dispatch, dispute handling, fixed-price approval and commission agreement recording. Provider verification should include identity, reachability, trade competence, references, service-area fit, applicable licences and a supervised pilot period. Do not request Aadhaar biometrics, full Aadhaar numbers or Aadhaar e-KYC payloads.
+## 8. Scale path
 
-## 6. Scale architecture
+Kwick is a pilot foundation, not a million-concurrent-user deployment. Keep a modular application and authoritative relational write model until measurements justify added complexity. Scale in evidence-driven stages: pooled connections and bounded queries; cache public catalogue reads; durable asynchronous queues for notifications/analytics; read replicas for eligible reads; partition high-volume event data; and consider regional read capacity or geographic write ownership only when required. Run staged load, soak, failover, and disaster-recovery tests on a production-equivalent environment before making capacity claims. See [Scale Readiness](SCALE_READINESS.md).
 
-The current system is a pilot foundation, not a million-concurrent-user deployment. It uses a modular app and a transactional relational backend to avoid premature microservices. Scale work must be driven by measurements: connection saturation, database I/O, query latency, cache hit rate, queue lag, booking contention and cost per completed job.
+## 9. Initial launch boundary
 
-The scale path is documented in [Scale Readiness](SCALE_READINESS.md): pooled connections and bounded queries first; then edge caching, read replicas and async queues; then partitioned event data, regional read capacity and geographic write ownership only when evidence justifies it. Million-user capacity requires staged load, soak, failover and disaster-recovery testing on a production-equivalent environment.
-
-## 7. Current launch boundary
-
-The only seeded service area is HSR Layout, Bengaluru, pincode 560102. Plumbing and electrical are the active pilot categories. Two or three Bengaluru neighbourhoods and 100 customers / 30 partners are launch targets, not current operating facts. Do not advertise other coverage until area records and verified partner capacity exist.
+The configured pilot area is HSR Layout, Bengaluru (560102). Plumbing and electrical are the initial active categories. Additional neighbourhoods and the 100-customer / 30-provider targets are plans, not current coverage or traction. Activate new areas only after provider coverage and operational support are verified.

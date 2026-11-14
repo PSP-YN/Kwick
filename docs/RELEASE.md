@@ -7,7 +7,7 @@
 | Customer | `lib/main_customer.dart` | `com.kwick.customer` | `customer` |
 | Partner | `lib/main_provider.dart` | `com.kwick.provider` | `provider` |
 
-The two apps share code and backend infrastructure but have separate install identities and role-locked navigation. The old NexHelp repository and deployment slugs may remain as historical infrastructure identifiers; all user-facing app branding is Kwick.
+The two apps share code and backend infrastructure but have separate install identities and role-locked navigation. The GitHub repository is `PSP-YN/Kwick`. Historical infrastructure identifiers (including the existing Supabase dashboard label and landing deployment alias) may still contain the former product name; these are retained until their actual services/domains are safely renamed.
 
 ## 2. Local quality gates
 
@@ -36,7 +36,7 @@ Expected APKs:
 
 Configure these GitHub Actions secrets:
 
-- `SUPABASE_URL` — dedicated Kwick HTTPS project URL.
+- `SUPABASE_URL` — HTTPS URL of the existing shared Kwick Supabase project.
 - `SUPABASE_ANON_KEY` — public anon/publishable key only.
 - `ANDROID_KEYSTORE_BASE64`
 - `ANDROID_KEYSTORE_PASSWORD`
@@ -85,7 +85,7 @@ A GitHub Actions billing/spending restriction can prevent jobs from starting. Su
 
 Before production release:
 
-1. Confirm the linked existing Supabase project ref `hpfzhovriwpivtotoyxw` (currently named NexHelp) and verify all migrations through `20261114172825_allow_safe_anon_admin_predicate.sql` are applied. Do not create a second project or relink to a different project.
+1. Confirm the linked existing Supabase project ref `hpfzhovriwpivtotoyxw` (the dashboard label may still display the historical name NexHelp) and verify all migrations through `20261114172825_allow_safe_anon_admin_predicate.sql` are applied. Kwick intentionally shares this project; do not create a second project or relink it without an explicit decision.
 2. Run live database advisors and inspect RLS/storage policies.
 3. Configure Auth email delivery, account recovery, rate limits and admin TOTP/AAL2.
 4. Verify provider-document upload and admin signed-document review with separate test accounts.
