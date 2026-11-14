@@ -2,7 +2,7 @@ name: Kwick CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, kwick/platform-split ]
   pull_request:
     branches: [ main ]
 
@@ -91,6 +91,10 @@ jobs:
       - name: Install Admin Dependencies
         working-directory: admin
         run: npm ci
+
+      - name: Audit Admin Dependencies
+        working-directory: admin
+        run: npm audit --audit-level=moderate
 
       - name: Run Next.js Lint
         working-directory: admin

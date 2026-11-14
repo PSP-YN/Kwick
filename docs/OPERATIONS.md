@@ -15,7 +15,7 @@
 ## 2. Provider Onboarding & Verification Procedures
 
 1. **Application Submission:**
-   - Provider signs up, fills out experience and selects category (`plumbing` or `electrical`). Mobile document upload is not yet implemented; the provider remains pending until an operator completes an approved secure manual verification process.
+   - Provider signs up, fills out experience and selects category (`plumbing` or `electrical`), then uploads supported evidence in Kwick Partner. The provider remains pending until an operator completes the approved manual verification process.
    - Initial status: `pending`. Provider cannot view requests or receive assignments.
 2. **Operator Document Review:**
    - Operator logs into Admin Dashboard (`/admin/providers`).

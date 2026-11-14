@@ -1,5 +1,7 @@
 # Kwick Security & Row-Level Security (RLS) Specification
 
+See [Production Security & Operations](PRODUCTION_SECURITY_OPERATIONS.md) for the live project posture, recovery plan, settings still requiring dashboard verification, and launch gates.
+
 ## 1. Threat Model & Security Principles
 
 1. **Defense-in-Depth:** Frontend screens reflect state, but never authorize state. All permission, access separation, and transitions are validated inside PostgreSQL and Supabase Auth.
@@ -32,13 +34,15 @@
 
 ## 3. Privileged Functions (`SECURITY DEFINER`) Controls
 
-All stored procedures that bypass ordinary table constraints or modify critical multi-table invariants:
-1. Specify `SECURITY DEFINER`.
+Transactional SECURITY DEFINER implementations live in the non-PostgREST `private` schema. The public RPC names are SECURITY INVOKER wrappers, preserving client calls without exposing privileged function bodies. Trigger-only SECURITY DEFINER functions have no API-role EXECUTE grants.
+
+For user-invoked privileged operations:
+1. Specify `SECURITY DEFINER` only for the private implementation.
 2. Set `search_path` to the empty string and schema-qualify every application object.
-3. Assert `auth.uid() IS NOT NULL` and check authorization explicitly before performing actions.
+3. Assert `auth.uid() IS NOT NULL` and check authorization explicitly before performing actions. Trusted trigger/system functions may run with no end-user JWT but must remain non-executable through the Data API.
 4. Record every administrative action in `public.admin_audit_logs`.
 5. Revoke `EXECUTE` from `PUBLIC` and `anon` for privileged RPCs; grant only the authenticated role required by the client.
-6. Keep lookup helpers scoped to `auth.uid()` or an administrator. Cross-user helper calls return no rows, and internal role/provider lookup helpers are not directly executable by clients.
+6. Keep lookup helpers scoped to `auth.uid()` or an AAL2 administrator. Cross-user helper calls return no rows. Private helper implementations are not in the PostgREST-exposed schema list.
 7. Restrict column-level writes: providers can update availability only; profiles can update name and phone only; request and assignment state transitions, order events, and audit logs are changed through transactional RPCs.
 8. The first-admin bootstrap is callable only by the trusted database owner through the SQL editor. It is not a Data API endpoint.
 9. AI diagnosis requires a valid Supabase JWT and affirmative, versioned user consent; the Gemini key remains server-side; only usage metadata and the consent version are stored in the quota table; obvious identifiers are redacted best-effort; production requests are blocked unless the Gemini paid tier is operator-confirmed. Unpaid Gemini API services must not receive real customer data.

@@ -76,6 +76,12 @@ COMMIT;
 \i supabase/migrations/20261111000015_index_foreign_key_columns.sql
 \i supabase/migrations/20261111000016_hoist_auth_rls_helpers.sql
 \i supabase/migrations/20261114000017_kwick_commercial_terms.sql
+\i supabase/migrations/20261114170355_enforce_customer_provider_isolation.sql
+\i supabase/migrations/20261114170624_harden_pricing_functions_and_query_plans.sql
+\i supabase/migrations/20261114170722_consolidate_rls_and_guard_job_progress.sql
+\i supabase/migrations/20261114170938_internalize_security_definer_helpers.sql
+\i supabase/migrations/20261114171124_force_rls_price_audit_log.sql
+\i supabase/migrations/20261114171737_internalize_transactional_rpc_functions.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
@@ -564,6 +570,183 @@ BEGIN
 END;
 $$;
 DO $$ BEGIN RAISE NOTICE '[PASS] Test 20: Commission terms are private to the provider and admin'; END; $$;
+
+
+
+-- Test 21: Customer accounts cannot create provider identities or KYC records.
+RESET ROLE;
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+DO $$
+DECLARE v_area UUID; v_provider UUID;
+BEGIN
+  SELECT id INTO v_area FROM public.service_areas WHERE is_active = true LIMIT 1;
+  SELECT id INTO v_provider FROM public.providers WHERE profile_id = '44444444-4444-4444-4444-444444444444';
+  BEGIN
+    INSERT INTO public.providers(profile_id, service_area_id, experience_years, verification_status, availability_status)
+    VALUES ('22222222-2222-2222-2222-222222222222', v_area, 1, 'pending', 'unavailable');
+    RAISE EXCEPTION 'Test 21 Failed: customer created a provider identity';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO public.provider_documents(provider_id, document_type, storage_path, verification_status)
+    VALUES (v_provider, 'id_proof', '22222222-2222-2222-2222-222222222222/forbidden.pdf', 'pending');
+    RAISE EXCEPTION 'Test 21 Failed: customer uploaded provider KYC';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+END;
+$$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 21: Customer account cannot create partner profiles or provider KYC'; END; $$;
+
+-- Test 22: Provider accounts cannot create customer bookings.
+SET request.jwt.claim.sub = '44444444-4444-4444-4444-444444444444';
+DO $$
+DECLARE v_area UUID; v_category UUID;
+BEGIN
+  SELECT id INTO v_area FROM public.service_areas WHERE is_active = true LIMIT 1;
+  SELECT id INTO v_category FROM public.service_categories WHERE is_active = true LIMIT 1;
+  BEGIN
+    PERFORM public.create_service_request(
+      v_category, v_area, 'This is a provider trying to create a customer booking',
+      '12 Test Road, Bengaluru', '560102', NULL, NULL, NULL, NULL, NULL
+    );
+    RAISE EXCEPTION 'Test 22 Failed: provider created a customer booking';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+END;
+$$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 22: Provider account cannot create customer bookings'; END; $$;
+
+-- Test 23: A single identity cannot hold both customer and provider app roles.
+RESET ROLE;
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO public.user_roles(user_id, role)
+    VALUES ('22222222-2222-2222-2222-222222222222', 'provider');
+    RAISE EXCEPTION 'Test 23 Failed: customer identity acquired provider role';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+END;
+$$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 23: Customer and provider roles are mutually exclusive'; END; $$;
+
+
+
+-- Test 24: Trigger-only SECURITY DEFINER functions are not callable via PostgREST.
+DO $$
+BEGIN
+  ASSERT NOT has_function_privilege('anon', 'public.audit_provider_service_price_change()', 'EXECUTE'),
+    'Test 24 Failed: anonymous role can execute a trigger-only audit function';
+  ASSERT NOT has_function_privilege('authenticated', 'public.audit_provider_service_price_change()', 'EXECUTE'),
+    'Test 24 Failed: authenticated role can execute a trigger-only audit function';
+  ASSERT NOT has_function_privilege('anon', 'public.enforce_provider_service_price_review()', 'EXECUTE'),
+    'Test 24 Failed: anonymous role can execute a trigger-only pricing function';
+  ASSERT NOT has_function_privilege('authenticated', 'public.enforce_provider_service_price_review()', 'EXECUTE'),
+    'Test 24 Failed: authenticated role can execute a trigger-only pricing function';
+END;
+$$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 24: Trigger-only SECURITY DEFINER functions are not exposed to API roles'; END; $$;
+
+-- Test 25: New commercial foreign keys have supporting indexes.
+DO $$
+BEGIN
+  ASSERT to_regclass('public.idx_provider_commission_terms_approved_by') IS NOT NULL,
+    'Test 25 Failed: commission approver foreign key index missing';
+  ASSERT to_regclass('public.idx_provider_service_price_events_actor') IS NOT NULL,
+    'Test 25 Failed: price audit actor foreign key index missing';
+  ASSERT to_regclass('public.idx_provider_services_price_reviewed_by') IS NOT NULL,
+    'Test 25 Failed: price reviewer foreign key index missing';
+END;
+$$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 25: Commercial foreign keys are indexed'; END; $$;
+
+
+
+-- Test 26: A provider cannot progress a customer job without an active accepted assignment.
+RESET ROLE;
+SELECT set_config('test.request_id', (
+  SELECT id::text FROM public.service_requests
+   WHERE customer_id = '22222222-2222-2222-2222-222222222222'
+     AND status IN ('requested', 'reviewing')
+   ORDER BY created_at DESC LIMIT 1
+), true);
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '44444444-4444-4444-4444-444444444444';
+DO $$
+DECLARE v_request UUID;
+BEGIN
+  v_request := current_setting('test.request_id')::uuid;
+  BEGIN
+    PERFORM public.progress_service_request(v_request, 'travelling', NULL);
+    RAISE EXCEPTION 'Test 26 Failed: provider progressed a request without an accepted assignment';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+END;
+$$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 26: Provider job progression requires an accepted assignment'; END; $$;
+
+
+
+-- Test 27: Public helper endpoints are invoker-only; SECURITY DEFINER logic is private.
+DO $$
+BEGIN
+  ASSERT NOT (SELECT prosecdef FROM pg_proc WHERE oid = 'public.is_admin()'::regprocedure),
+    'Test 27 Failed: public.is_admin remains SECURITY DEFINER';
+  ASSERT NOT (SELECT prosecdef FROM pg_proc WHERE oid = 'public.has_role(uuid,text)'::regprocedure),
+    'Test 27 Failed: public.has_role remains SECURITY DEFINER';
+  ASSERT (SELECT prosecdef FROM pg_proc WHERE oid = 'private.is_admin()'::regprocedure),
+    'Test 27 Failed: private.is_admin is not SECURITY DEFINER';
+  ASSERT NOT has_schema_privilege('anon', 'private', 'USAGE'),
+    'Test 27 Failed: anon can access the private helper schema';
+  ASSERT has_schema_privilege('authenticated', 'private', 'USAGE'),
+    'Test 27 Failed: authenticated role cannot use RLS authorization helpers';
+END;
+$$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 27: Authorization SECURITY DEFINER helpers are isolated from PostgREST'; END; $$;
+
+DO $$ BEGIN
+  ASSERT (SELECT relforcerowsecurity FROM pg_class WHERE oid='public.provider_service_price_events'::regclass),
+    'Test 28 Failed: provider price audit table does not FORCE RLS';
+END; $$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 28: Provider price audit log forces RLS'; END; $$;
+
+
+
+-- Test 29: Transactional RPCs are invoker wrappers; privileged bodies are private.
+DO $$
+DECLARE v_name TEXT;
+BEGIN
+  FOREACH v_name IN ARRAY ARRAY[
+    'admin_override_request_status',
+    'admin_record_provider_commission_terms',
+    'admin_verify_provider',
+    'assign_provider_to_request',
+    'cancel_service_request',
+    'create_service_request',
+    'progress_service_request',
+    'respond_to_assignment'
+  ] LOOP
+    ASSERT NOT (
+      SELECT p.prosecdef FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = v_name
+      LIMIT 1
+    ), format('Test 29 Failed: public.%s is still SECURITY DEFINER', v_name);
+    ASSERT NOT has_function_privilege('anon',
+      (SELECT p.oid FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+       WHERE n.nspname='public' AND p.proname=v_name LIMIT 1), 'EXECUTE'),
+      format('Test 29 Failed: anon can execute public.%s', v_name);
+    ASSERT (
+      SELECT p.prosecdef FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'private' AND p.proname = v_name
+      LIMIT 1
+    ), format('Test 29 Failed: private.%s is not SECURITY DEFINER', v_name);
+  END LOOP;
+END;
+$$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 29: All transactional SECURITY DEFINER bodies are isolated in private schema'; END; $$;
 
 RESET ROLE;
 ROLLBACK;

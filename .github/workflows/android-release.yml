@@ -47,7 +47,7 @@ jobs:
           done
           case "$SUPABASE_URL" in
             https://*.supabase.co) ;;
-            *) echo "::error::SUPABASE_URL must be the dedicated HTTPS Kwick project URL"; exit 1 ;;
+            *) echo "::error::SUPABASE_URL must be the existing shared Kwick Supabase project HTTPS URL"; exit 1 ;;
           esac
           if [[ "$SUPABASE_URL" == *example* || "$SUPABASE_URL" == *placeholder* ]]; then
             echo "::error::SUPABASE_URL still contains a placeholder"; exit 1

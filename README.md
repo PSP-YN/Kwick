@@ -42,6 +42,7 @@ Kwick/
 ├── landing/              # Public static website
 ├── supabase/             # Migrations, Edge Functions, database tests
 ├── scripts/load/         # Staging k6 smoke/load test
+├── scripts/backup/       # Encrypted Supabase logical backup/export
 └── docs/                 # Architecture, launch, commercial and scale plans
 ```
 
@@ -155,6 +156,7 @@ The project is developed on Linux; Xcode compilation, signing, provisioning and 
 - [Scale readiness and capacity plan](docs/SCALE_READINESS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security and access control](docs/SECURITY.md)
+- [Production security, backup and recovery operations](docs/PRODUCTION_SECURITY_OPERATIONS.md)
 - [Database schema and invariants](docs/DATABASE.md)
 - [AI triage safety and privacy](docs/AI_DIAGNOSIS.md)
 - [Release guide](docs/RELEASE.md)

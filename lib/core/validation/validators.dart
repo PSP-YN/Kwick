@@ -37,12 +37,27 @@ class Validators {
     return null;
   }
 
+  /// Validation for newly created passwords. Keep in sync with Supabase Auth.
   static String? validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter a password.';
     }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters.';
+    if (value.length < 8) {
+      return 'Use at least 8 characters.';
+    }
+    if (!RegExp(r'[a-z]').hasMatch(value) ||
+        !RegExp(r'[A-Z]').hasMatch(value) ||
+        !RegExp(r'[0-9]').hasMatch(value) ||
+        !RegExp(r'[^A-Za-z0-9]').hasMatch(value)) {
+      return 'Include uppercase, lowercase, a number and a symbol.';
+    }
+    return null;
+  }
+
+  /// Existing accounts may predate the stronger sign-up policy.
+  static String? validateLoginPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your password.';
     }
     return null;
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { ShieldCheck, MapPin, RefreshCw, LogOut } from 'lucide-react';
 
 interface HeaderProps {
@@ -27,7 +28,7 @@ export default function Header({
           {/* Logo & Pilot Area Badge */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <img src="/kwick-mark.png" alt="" className="h-9 w-9 object-contain" />
+              <Image src="/kwick-mark.png" alt="" width={36} height={36} priority className="h-9 w-9 object-contain" />
               <div>
                 <span className="text-xl font-bold tracking-tight text-zinc-900">
                   Kwick

@@ -81,6 +81,38 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                 const SizedBox(height: AppSpacing.lg),
 
+                if (authState.infoMessage != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: AppSpacing.roundedSm,
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.mark_email_read_outlined,
+                          size: 20.0,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            authState.infoMessage!,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
                 // Error alert if present
                 if (authState.errorMessage != null) ...[
                   Container(
@@ -159,7 +191,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                         AppTextField(
                           label: 'Password',
-                          hint: 'Minimum 6 characters',
+                          hint:
+                              '8+ characters with upper, lower, number and symbol',
                           controller: _passwordController,
                           obscureText: _obscurePassword,
                           validator: Validators.validatePassword,

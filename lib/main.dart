@@ -1,14 +1,32 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/config/app_config.dart';
 import 'core/config/app_mode.dart';
+import 'core/logging/app_logger.dart';
 
 Future<void> main() => bootstrapKwick(KwickAppMode.customer);
 
 Future<void> bootstrapKwick(KwickAppMode mode) async {
   WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = (details) {
+    if (kDebugMode) FlutterError.presentError(details);
+    AppLogger.error(
+      'flutter_framework_error',
+      error: details.exception,
+      stackTrace: details.stack,
+    );
+  };
+  PlatformDispatcher.instance.onError = (error, stackTrace) {
+    AppLogger.error(
+      'uncaught_platform_error',
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return false;
+  };
 
   if (!AppConfig.hasValidSupabaseConfig) {
     runApp(_BackendConfigurationRequiredApp(mode: mode));
@@ -22,8 +40,11 @@ Future<void> bootstrapKwick(KwickAppMode mode) async {
       anonKey: AppConfig.supabaseAnonKey,
     );
   } catch (error, stackTrace) {
-    debugPrint('Kwick backend initialization failed: $error');
-    debugPrintStack(stackTrace: stackTrace);
+    AppLogger.error(
+      'supabase_initialization_failed',
+      error: error,
+      stackTrace: stackTrace,
+    );
     runApp(_BackendConfigurationRequiredApp(mode: mode));
     return;
   }

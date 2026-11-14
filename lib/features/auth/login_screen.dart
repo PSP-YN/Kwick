@@ -26,7 +26,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
-    _emailController.disposeNavigator();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -122,6 +121,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: AppSpacing.lg),
 
+                          if (authState.infoMessage != null) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12.0),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.08,
+                                ),
+                                borderRadius: AppSpacing.roundedSm,
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.25,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.mark_email_read_outlined,
+                                    size: 20.0,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Expanded(
+                                    child: Text(
+                                      authState.infoMessage!,
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                          ],
+
                           // Error alert if present
                           if (authState.errorMessage != null) ...[
                             Container(
@@ -173,7 +208,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             hint: '••••••••',
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            validator: Validators.validatePassword,
+                            validator: Validators.validateLoginPassword,
                             prefixIcon: const Icon(
                               Icons.lock_outline,
                               size: 20.0,
@@ -230,8 +265,4 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
-}
-
-extension on TextEditingController {
-  void disposeNavigator() {}
 }

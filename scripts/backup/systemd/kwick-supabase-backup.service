@@ -1,0 +1,11 @@
+[Unit]
+Description=Encrypted logical backup of the Kwick Supabase project
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/Kwick
+Environment=KWICK_BACKUP_DIR=%h/.config/kwick/backups
+Environment=KWICK_BACKUP_RETENTION_DAYS=30
+ExecStart=%h/projects/Kwick/scripts/backup/export-encrypted-supabase.sh

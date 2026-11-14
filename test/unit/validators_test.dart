@@ -20,9 +20,11 @@ void main() {
 
     test('validatePassword', () {
       expect(Validators.validatePassword(null), isNotNull);
-      expect(Validators.validatePassword('12345'), isNotNull);
-      expect(Validators.validatePassword('123456'), isNull);
-      expect(Validators.validatePassword('securePass123'), isNull);
+      expect(Validators.validatePassword('123456'), isNotNull);
+      expect(Validators.validatePassword('securePass123'), isNotNull);
+      expect(Validators.validatePassword('SecurePass123!'), isNull);
+      expect(Validators.validateLoginPassword('123456'), isNull);
+      expect(Validators.validateLoginPassword(''), isNotNull);
     });
 
     test('validatePhone', () {

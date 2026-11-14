@@ -21,6 +21,7 @@ import {
 } from '../lib/supabase';
 import { MapPin, ShieldCheck, TrendingUp, Clock } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { logAdminError } from '../lib/logger';
 
 function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut: () => void }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'dispatch' | 'providers' | 'commercial' | 'disputes'>('overview');
@@ -53,9 +54,8 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
       setProviders(p);
       setTickets(t);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unable to load operational data.';
-      setLoadError(message);
-      console.error('Failed to load operational admin data:', err);
+      setLoadError('Operational data could not be loaded. Verify the administrator session and try again.');
+      logAdminError('admin_operational_data_load_failed', err);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -80,9 +80,9 @@ function AdminDashboard({ userEmail, onSignOut }: { userEmail: string; onSignOut
           setLoading(false);
         }
       } catch (err) {
-        console.error('Initial admin data load error:', err);
+        logAdminError('admin_initial_data_load_failed', err);
         if (isMounted) {
-          setLoadError(err instanceof Error ? err.message : 'Unable to load operational data.');
+          setLoadError('Operational data could not be loaded. Verify the administrator session and try again.');
           setLoading(false);
         }
       }

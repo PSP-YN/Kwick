@@ -2,12 +2,20 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/errors/failures.dart';
 import '../../core/config/app_mode.dart';
+import '../../core/logging/app_logger.dart';
 import '../../shared/models/provider_profile.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/models/user_role.dart';
 import '../../shared/services/supabase_service.dart';
 
-enum AuthStatus { initial, loading, authenticated, unauthenticated, error }
+enum AuthStatus {
+  initial,
+  loading,
+  authenticated,
+  unauthenticated,
+  awaitingEmailConfirmation,
+  error,
+}
 
 class AuthState {
   final AuthStatus status;
@@ -15,6 +23,7 @@ class AuthState {
   final ProviderProfile? providerProfile;
   final UserRole activeRole;
   final String? errorMessage;
+  final String? infoMessage;
 
   const AuthState({
     this.status = AuthStatus.initial,
@@ -22,6 +31,7 @@ class AuthState {
     this.providerProfile,
     this.activeRole = UserRole.customer,
     this.errorMessage,
+    this.infoMessage,
   });
 
   bool get isAuthenticated =>
@@ -36,6 +46,7 @@ class AuthState {
     ProviderProfile? providerProfile,
     UserRole? activeRole,
     String? errorMessage,
+    String? infoMessage,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -43,6 +54,7 @@ class AuthState {
       providerProfile: providerProfile ?? this.providerProfile,
       activeRole: activeRole ?? this.activeRole,
       errorMessage: errorMessage,
+      infoMessage: infoMessage ?? this.infoMessage,
     );
   }
 }
@@ -53,9 +65,12 @@ final authControllerProvider = NotifierProvider<AuthController, AuthState>(
 
 class AuthController extends Notifier<AuthState> {
   SupabaseService get _supabase => ref.read(supabaseServiceProvider);
+  StreamSubscription<dynamic>? _authSubscription;
+  int _refreshGeneration = 0;
 
   @override
   AuthState build() {
+    ref.onDispose(() => _authSubscription?.cancel());
     Future.microtask(() => _init());
     return const AuthState();
   }
@@ -68,8 +83,9 @@ class AuthController extends Notifier<AuthState> {
       state = state.copyWith(status: AuthStatus.unauthenticated);
     }
 
-    _supabase.authStateChanges.listen((data) {
+    _authSubscription = _supabase.authStateChanges.listen((data) {
       if (data.session == null) {
+        _refreshGeneration++;
         state = const AuthState(status: AuthStatus.unauthenticated);
       } else {
         refreshProfile();
@@ -78,6 +94,7 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> refreshProfile() async {
+    final generation = ++_refreshGeneration;
     final user = _supabase.currentUser;
     if (user == null) {
       state = state.copyWith(status: AuthStatus.unauthenticated);
@@ -86,6 +103,7 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       final profile = await _supabase.fetchUserProfile(user.id);
+      if (generation != _refreshGeneration) return;
       final requiredRole = ref.read(kwickAppModeProvider).role;
       if (profile == null || !profile.roles.contains(requiredRole)) {
         state = AuthState(
@@ -110,25 +128,33 @@ class AuthController extends Notifier<AuthState> {
         activeRole: activeRole,
         errorMessage: null,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      if (generation != _refreshGeneration) return;
+      AppLogger.error(
+        'auth_profile_refresh_failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: e.toString(),
+        errorMessage:
+            'We could not load your account. Check your connection and try again.',
       );
     }
   }
 
   Future<void> signIn({required String email, required String password}) async {
-    state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+    state = const AuthState(status: AuthStatus.loading);
     try {
       await _supabase.signIn(email: email, password: password);
       await refreshProfile();
     } on Failure catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.error('auth_sign_in_failed', error: e, stackTrace: stackTrace);
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: 'Failed to sign in: $e',
+        errorMessage: 'Sign-in failed. Check your details and try again.',
       );
     }
   }
@@ -140,7 +166,7 @@ class AuthController extends Notifier<AuthState> {
     String? phone,
     UserRole? initialRole,
   }) async {
-    state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+    state = const AuthState(status: AuthStatus.loading);
     try {
       final requiredRole = ref.read(kwickAppModeProvider).role;
       if (initialRole != null && initialRole != requiredRole) {
@@ -148,20 +174,30 @@ class AuthController extends Notifier<AuthState> {
           'This Kwick app can only create its own account type.',
         );
       }
-      await _supabase.signUp(
+      final response = await _supabase.signUp(
         email: email,
         password: password,
         fullName: fullName,
         phone: phone,
         initialRole: requiredRole,
       );
+      if (response.session == null) {
+        state = AuthState(
+          status: AuthStatus.awaitingEmailConfirmation,
+          infoMessage:
+              'Account created. Check $email for the confirmation link, then sign in.',
+        );
+        return;
+      }
       await refreshProfile();
     } on Failure catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.error('auth_sign_up_failed', error: e, stackTrace: stackTrace);
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: 'Failed to create account: $e',
+        errorMessage:
+            'Account creation failed. Check the details and try again.',
       );
     }
   }
@@ -171,10 +207,11 @@ class AuthController extends Notifier<AuthState> {
     try {
       await _supabase.signOut();
       state = const AuthState(status: AuthStatus.unauthenticated);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.error('auth_sign_out_failed', error: e, stackTrace: stackTrace);
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: 'Failed to sign out: $e',
+        errorMessage: 'Sign-out failed. Please try again.',
       );
     }
   }

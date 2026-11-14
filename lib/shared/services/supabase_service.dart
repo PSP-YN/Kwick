@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/errors/failures.dart';
+import '../../core/logging/app_logger.dart';
 import '../models/assignment.dart';
 import '../models/provider_profile.dart';
 import '../models/review.dart';
@@ -27,6 +28,20 @@ class SupabaseService {
 
   User? get currentUser => client.auth.currentUser;
   bool get isAuthenticated => currentUser != null;
+
+  bool _hasValidFileSignature(Uint8List bytes, String contentType) {
+    final signature = switch (contentType) {
+      'image/jpeg' => const [0xFF, 0xD8, 0xFF],
+      'image/png' => const [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
+      'application/pdf' => const [0x25, 0x50, 0x44, 0x46, 0x2D],
+      _ => const <int>[],
+    };
+    if (signature.isEmpty || bytes.length < signature.length) return false;
+    for (var index = 0; index < signature.length; index++) {
+      if (bytes[index] != signature[index]) return false;
+    }
+    return true;
+  }
 
   // ---------------------------------------------------------------------------
   // Authentication & Session
@@ -357,7 +372,7 @@ class SupabaseService {
     }
     if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
       throw const ValidationFailure(
-        'Choose a non-empty file smaller than 10 MB.',
+        'Choose a non-empty file that is 10 MB or smaller.',
       );
     }
     if (!const {
@@ -368,9 +383,23 @@ class SupabaseService {
       throw const ValidationFailure('Upload a JPG, PNG or PDF document.');
     }
 
-    final extension = fileName.contains('.')
+    final extension = switch (contentType) {
+      'image/jpeg' => 'jpg',
+      'image/png' => 'png',
+      'application/pdf' => 'pdf',
+      _ => throw const ValidationFailure('Unsupported document file type.'),
+    };
+    final suppliedExtension = fileName.contains('.')
         ? fileName.split('.').last.toLowerCase()
-        : 'bin';
+        : '';
+    final extensionMatches =
+        suppliedExtension == extension ||
+        (contentType == 'image/jpeg' && suppliedExtension == 'jpeg');
+    if (!extensionMatches || !_hasValidFileSignature(bytes, contentType)) {
+      throw const ValidationFailure(
+        'The selected file does not match its actual JPG, PNG or PDF format.',
+      );
+    }
     final objectPath =
         '${user.id}/$providerId/${documentType}_${const Uuid().v4()}.$extension';
     try {
@@ -392,10 +421,25 @@ class SupabaseService {
         await client.storage.from('provider-documents').remove([objectPath]);
         rethrow;
       }
-    } on PostgrestException catch (e) {
-      throw ServerFailure(e.message, code: e.code);
-    } catch (e) {
-      throw ServerFailure('Verification document upload failed: $e');
+    } on PostgrestException catch (e, stackTrace) {
+      AppLogger.error(
+        'provider_document_metadata_write_failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw ServerFailure(
+        'Verification document could not be recorded.',
+        code: e.code,
+      );
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'provider_document_upload_failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw const ServerFailure(
+        'Verification document upload failed. Try again.',
+      );
     }
   }
 

@@ -85,7 +85,7 @@ A GitHub Actions billing/spending restriction can prevent jobs from starting. Su
 
 Before production release:
 
-1. Confirm a dedicated Kwick Supabase project and apply all migrations, including `20261114000017_kwick_commercial_terms.sql`.
+1. Confirm the linked existing Supabase project ref `hpfzhovriwpivtotoyxw` (currently named NexHelp) and verify all migrations through `20261114171737_internalize_transactional_rpc_functions.sql` are applied. Do not create a second project or relink to a different project.
 2. Run live database advisors and inspect RLS/storage policies.
 3. Configure Auth email delivery, account recovery, rate limits and admin TOTP/AAL2.
 4. Verify provider-document upload and admin signed-document review with separate test accounts.
