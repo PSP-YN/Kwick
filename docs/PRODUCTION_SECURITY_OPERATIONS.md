@@ -64,7 +64,7 @@ An encrypted pre-deployment snapshot was created before the Kwick commercial and
 - The archive was decrypted and its contents verified.
 - The passphrase is stored in the local desktop keyring under service kwick-backup, account database-backup.
 
-A current encrypted logical backup was generated after migration 20261114171737 with scripts/backup/export-encrypted-supabase.sh. A systemd user timer is enabled for daily 02:30 local exports with 30-day local retention. It runs only when this laptop/user session is available; no off-site rclone destination is configured.
+A current encrypted logical backup was generated after migration 20261114172825 with scripts/backup/export-encrypted-supabase.sh. A systemd user timer is enabled for daily 02:30 local exports with 30-day local retention. It runs only when this laptop/user session is available; no off-site rclone destination is configured.
 
 **This is not yet a complete disaster-recovery system.** Supabase CLI logical dumps exclude Auth credentials/sessions and Storage binary payloads. The current Storage object count was zero at backup time. The backup currently exists only on this laptop; no off-site destination is configured and no restore drill has been run.
 
