@@ -82,6 +82,7 @@ COMMIT;
 \i supabase/migrations/20261114170938_internalize_security_definer_helpers.sql
 \i supabase/migrations/20261114171124_force_rls_price_audit_log.sql
 \i supabase/migrations/20261114171737_internalize_transactional_rpc_functions.sql
+\i supabase/migrations/20261114172825_allow_safe_anon_admin_predicate.sql
 
 -- ============================================================================
 -- Test Suite Execution (Part 1: Superuser / Admin & Operations)
@@ -697,8 +698,12 @@ BEGIN
     'Test 27 Failed: public.has_role remains SECURITY DEFINER';
   ASSERT (SELECT prosecdef FROM pg_proc WHERE oid = 'private.is_admin()'::regprocedure),
     'Test 27 Failed: private.is_admin is not SECURITY DEFINER';
-  ASSERT NOT has_schema_privilege('anon', 'private', 'USAGE'),
-    'Test 27 Failed: anon can access the private helper schema';
+  ASSERT has_schema_privilege('anon', 'private', 'USAGE'),
+    'Test 27 Failed: anon cannot evaluate the safe is_admin RLS predicate';
+  ASSERT has_function_privilege('anon', 'private.is_admin()', 'EXECUTE'),
+    'Test 27 Failed: anon cannot evaluate the safe is_admin RLS predicate';
+  ASSERT NOT has_function_privilege('anon', 'private.has_role(uuid,text)', 'EXECUTE'),
+    'Test 27 Failed: anon can execute the cross-user role helper';
   ASSERT has_schema_privilege('authenticated', 'private', 'USAGE'),
     'Test 27 Failed: authenticated role cannot use RLS authorization helpers';
 END;
@@ -747,6 +752,26 @@ BEGIN
 END;
 $$;
 DO $$ BEGIN RAISE NOTICE '[PASS] Test 29: All transactional SECURITY DEFINER bodies are isolated in private schema'; END; $$;
+
+
+
+-- Test 30: Anonymous catalogue reads remain public while admin checks fail closed.
+RESET ROLE;
+SET request.jwt.claim.sub = '';
+SET request.jwt.claim.role = 'anon';
+SET ROLE anon;
+DO $$
+DECLARE v_categories INTEGER; v_areas INTEGER;
+BEGIN
+  ASSERT public.is_admin() = false,
+    'Test 30 Failed: anonymous is_admin predicate did not fail closed';
+  SELECT count(*) INTO v_categories FROM public.service_categories WHERE is_active = true;
+  SELECT count(*) INTO v_areas FROM public.service_areas WHERE is_active = true;
+  ASSERT v_categories > 0, 'Test 30 Failed: anonymous catalogue category read was denied';
+  ASSERT v_areas > 0, 'Test 30 Failed: anonymous service area read was denied';
+END;
+$$;
+DO $$ BEGIN RAISE NOTICE '[PASS] Test 30: Anonymous catalogue access works and admin predicate remains false'; END; $$;
 
 RESET ROLE;
 ROLLBACK;

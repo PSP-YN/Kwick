@@ -21,11 +21,12 @@ This is a verified baseline and deployment gate list, not a claim that every sec
 
 ### Database and functions
 
-- Migrations are versioned and applied to the existing project through 20261114171737.
+- Migrations are versioned and applied to the existing project through 20261114172825.
 - Customer/provider ownership checks and assignment state invariants are enforced in PostgreSQL.
 - Trigger-only pricing/audit functions have EXECUTE revoked from anon and authenticated.
 - Commercial price proposals are audited; active commission requires provider agreement and administrator approval.
 - The AI usage table has RLS and FORCE RLS with no client policies by design; it is server-only.
+- Anonymous clients can read only active service categories and service areas. The is_admin predicate returns false for anonymous JWTs; provider, customer and document records remain protected by RLS.
 - Edge Function JWT verification is enabled. CORS uses exact allowed origins; no wildcard origin is configured.
 - Public PostgREST functions are SECURITY INVOKER wrappers; authorization and transactional SECURITY DEFINER bodies are isolated in the non-exposed private schema. No SECURITY DEFINER functions are exposed in public and no anonymous execute grants remain for the transactional RPCs.
 - The Security Advisor currently reports one WARN for leaked-password protection being disabled and one INFO for ai_diagnosis_usage. The INFO finding is intentional: no client policy means clients cannot read or write usage rows.
